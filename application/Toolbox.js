@@ -55,6 +55,11 @@ class Toolbox {
 		if (typeof num === "string" && num.trim() != "") return Number.isFinite ? Number.isFinite(+num) : isFinite(+num);
 		return false;
 	}
+	static RandomPositiveInt(min, max) {
+		if (!min) min = 0;
+		if (!max) max = Number.MAX_VALUE;
+		return Math.floor(Math.random() * (max - min)) + min;
+	}
 	static async XmlToString(xml) {
 		return new Promise((resolve, reject)=> {
             xml2js.parseString(xml, function(err, obj) {

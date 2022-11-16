@@ -1,0 +1,108 @@
+"use strict"
+class Api {
+	#HTTP_STATUSES;#connector;#core;
+	constructor(...args) {
+		this.#core = args[0];
+		this.#HTTP_STATUSES = this.#core.HttpStatuses;
+		this.#connector = this.#core.Connector;
+	}
+	#GetAppData(packet, users) {
+		let user = users.find(item => item.Uid == packet.uid);
+		let dicts = this.#core.Dicts.List;
+		let data = {action: packet.data.action};
+		let rpacket = new Packet({status: this.#HTTP_STATUSES.OK, data: data, hash: packet.hash});
+		user.CloseConnection(rpacket.ToString());
+	}
+	#GetPaymentsList(packet, users, application) {
+		let list = application.PaymentsList();
+		let data = {action: packet.data.action, list: list};
+		let rpacket = new Packet({status: this.#HTTP_STATUSES.OK, data: data, hash: packet.hash});
+
+		let user = users.find(item => item.Uid == packet.uid);
+		user.CloseConnection(rpacket.ToString());
+	}
+	async #NewTask(packet, users, application) {
+		console.log("+++", packet);
+		let errs = [];
+		let status = this.#HTTP_STATUSES.BAD_REQUEST;
+		if (!packet?.data?.task?.person) errs.push("Вы не указали персону");
+		if (!packet?.data?.task?.turnType) errs.push("Вы не указали тип обработки очереди");
+		if (!packet?.data?.task?.operator) errs.push("Вы не указали оператора");
+
+		if (!packet?.data?.task?.minInterval || !packet?.data?.task?.maxInterval) errs.push("Вы не указали один из интервалов или оба");
+		else {
+			if (!this.#core.Toolbox.IsNumber(packet.data.task.minInterval) || !this.#core.Toolbox.IsNumber(packet.data.task.maxInterval)) errs.push("Интервал это число!");
+			else {
+				if (packet.data.task.minInterval > packet.data.task.maxInterval) errs.push("Минимальный интервал не может быть больше максимального");
+			}
+		}
+
+
+		if (!packet?.data?.task?.list && !Array.isArray(packet.data.task.list)) errs.push("Вы не указали список данных");
+
+		let data = {action: packet.data.action};
+		if (errs.length == 0) {
+			let data = {list: [], minInterval: packet.data.task.minInterval, maxInterval: packet.data.task.maxInterval, operator: packet.data.task.operator};
+			for (let item of packet.data.task.list) {
+				if (!this.#core.Toolbox.IsNumber(item.num) || item.num.toString().length != 10) {
+					errs.push("Ошибочная длина номера");
+					break;
+				}
+				if (!this.#core.Toolbox.IsNumber(item.amount) || item.amount > 200) {
+					errs.push("Ошибочная суммы пополнения");
+					break;
+				}
+				item.hash = this.#core.Toolbox.GenerateUniqueHash();
+				data.list.push(item);
+			}
+			if (errs.length == 0) {
+				let result = await this.#connector.Request("dexol", `
+					INSERT INTO kiwi_payments_list
+					SET terminal = '10746127', person = '13250871', data = '${JSON.stringify(data)}', status = '1'
+				`);
+				if (!result || result.affectedRows != 1) errs.push("Ошибка в процессе добавления записи");
+				else {
+					status = this.#HTTP_STATUSES.OK;
+					await application.UpdatePaymentsList();
+				}
+			} else data.errs = errs;
+		} else data.errs = errs;
+
+		let rpacket = new Packet({status: status, data: data, hash: packet.hash});
+
+		let user = users.find(item => item.Uid == packet.uid);
+		user.CloseConnection(rpacket.ToString());
+	}
+	Check(packet, users, response, application) {
+		let allowed = [
+			{name: "getAppData",           method: (...args) => { this.#GetAppData(...args) } },
+			{name: "getPaymentsList",      method: (...args) => { this.#GetPaymentsList(...args) } },
+			{name: "newTask",      method: (...args) => { this.#NewTask(...args) } },
+			// {name: }
+		];
+		if (!allowed.find(item=> item.name == packet?.data?.action)) {
+			let p = {status: this.#HTTP_STATUSES.METHOD_NOT_ALLOWED, data: {action: packet?.data?.action, errs: ["Action not allowed"]}};
+			response.end(new Packet(p).ToString());
+		} else {
+			response.end(new Packet({status: this.#HTTP_STATUSES.OK, message: "Ok"}).ToString());
+			allowed.find(item=> item.name == packet.data.action).method(packet, users, application);
+		}
+	}
+}
+module.exports = Api;
+
+
+class Packet {
+	#packet = {};
+	constructor(args) {
+		this.#packet.com = args?.com || "dexol.apps.kiwi";
+		this.#packet.subcom = "api";
+		this.#packet.data = args?.data;
+		this.#packet.status = args?.status;
+		this.#packet.message = args?.message;
+		this.#packet.hash = args?.hash;
+	}
+	set Hash(hash) { this.#packet.hash = hash; }
+	GetPacket() { return this.#packet; }
+	ToString() { return JSON.stringify(this.#packet); }
+}

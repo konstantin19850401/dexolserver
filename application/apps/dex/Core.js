@@ -80,7 +80,7 @@ class Base {
 		this.#title = data?.title || "";
 		this.#status = data?.status || 0;
 		this.#operator = await this.#GetOperator(data?.operator);
-		setTimeout(()=> this.#ConvertBase(), 5000);
+		// setTimeout(()=> this.#ConvertBase(), 5000);
 	}
 	async #ConvertBase() {
 		await this.#connector.Request("dexol", `

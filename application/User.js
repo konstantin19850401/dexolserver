@@ -61,7 +61,6 @@ class User {
 				this.#subscription.end(packet);
 				this.#subscription = null;
 			} else {
-				// console.log("Нет линка. Подождем подписку");
 				this.#packages.push(packet);
 				if (!this.#timer) this.#timer = setInterval(()=> {this.#Tick()}, 500);
 			}
