@@ -1,6 +1,7 @@
 'use strict'
 // МОДУЛИ
-let mysql = require("mysql");
+// let mysql = require("mysql");
+let mysql = require("mysql2");
 class Mysql {
     #bases = [];#pool = [];
     #name = "mysql";

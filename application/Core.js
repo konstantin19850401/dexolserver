@@ -23,7 +23,7 @@ class Core {
 	get Toolbox() { return TOOLBOX; }
 
 	Start() {
-		this.#express.use(this.#AllowCrossDomain());
+		this.#express.use(this.#AllowCrossDomain())
 		this.#InitApplication();
 	}
 	#AllowCrossDomain() {
@@ -63,7 +63,7 @@ class Core {
 	}
 	#InitDefConnection() {
 		let mysql = this.#connectors.find(item=> item.Name == "mysql");
-		mysql.AddBase({name: "dexol", host: "127.0.0.1", user: "dex", password: "dex", database: "dexol_system"});
+		mysql.AddBase({name: "dexol", host: "127.0.0.1", user: "dex", password: "12473513", database: "dexol_system"});
 		return true;
 	}
 	#InitApps() {

@@ -11,15 +11,17 @@ class Auth {
 	static get ConnectorName() { return CONNECTOR_NAME; }
 
 	async #InitSession(packet, users, response) {
+		console.log(packet);
 		let obj = {};
 		if (packet?.data?.login && packet?.data?.password) {
 			let rpacket;
 			let rows = await this.#connector.Request("dexol", `
-				SELECT u.username, u.data, u.group, u.status
-                FROM users AS u
-                LEFT JOIN groups AS g ON u.group = g.uid
-                WHERE u.username = '${packet.data.login}' AND u.password = '${packet.data.password}'
+				SELECT users.username, users.data, users.group, users.status
+                FROM \`users\`
+                LEFT JOIN \`groups\` AS g ON users.group = g.uid
+                WHERE users.username = '${packet.data.login}' AND users.password = '${packet.data.password}'
 			`);
+
 			if (rows.length == 1) {
 				let user = new User(rows[0], this.#toolbox);
 				if (user.Status == 0) {

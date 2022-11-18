@@ -22,7 +22,6 @@ class Api {
 		user.CloseConnection(rpacket.ToString());
 	}
 	async #NewTask(packet, users, application) {
-		console.log("+++", packet);
 		let errs = [];
 		let status = this.#HTTP_STATUSES.BAD_REQUEST;
 		if (!packet?.data?.task?.person) errs.push("Вы не указали персону");
@@ -36,7 +35,6 @@ class Api {
 				if (packet.data.task.minInterval > packet.data.task.maxInterval) errs.push("Минимальный интервал не может быть больше максимального");
 			}
 		}
-
 
 		if (!packet?.data?.task?.list && !Array.isArray(packet.data.task.list)) errs.push("Вы не указали список данных");
 
@@ -56,14 +54,18 @@ class Api {
 				data.list.push(item);
 			}
 			if (errs.length == 0) {
+				let moment = this.#core.Toolbox.Moment();
+				let cdate = moment();
+				// let paymentDate = moment().format("YYYY-MM-DDTHH:mm:ss");
+				let terminal = "10746127";
 				let result = await this.#connector.Request("dexol", `
 					INSERT INTO kiwi_payments_list
-					SET terminal = '10746127', person = '13250871', data = '${JSON.stringify(data)}', status = '1'
+					SET terminal = '${terminal}', person = '13250871', data = '${JSON.stringify(data)}', date = '${cdate.format("YYYY-MM-DDTHH:mm:ss")}', status = '1'
 				`);
 				if (!result || result.affectedRows != 1) errs.push("Ошибка в процессе добавления записи");
 				else {
 					status = this.#HTTP_STATUSES.OK;
-					await application.UpdatePaymentsList();
+					await application.UpdateTerminalPaymentsList(terminal);
 				}
 			} else data.errs = errs;
 		} else data.errs = errs;
