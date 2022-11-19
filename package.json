@@ -8,6 +8,7 @@
     "express": "^4.17.2",
     "moment": "^2.22.2",
     "mysql": "^2.18.1",
+    "mysql2": "^2.3.3",
     "node-rsa": "^1.1.1",
     "openssl": "^2.0.0",
     "strong-soap": "^1.13.1",
