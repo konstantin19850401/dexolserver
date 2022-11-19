@@ -613,7 +613,7 @@ class PaymentsTask {
 		// проверить статусы
 		for (let payment of this.#list) {
 			if (payment.status == 6) {
-				console.log("Есть платеж на проверку статуса ", payment);
+				console.log("Есть платеж на проверку статуса ", payment.num);
 				let check = await this.#terminal.CheckPaymentStatus(this.#person, payment);
 				if (check.status == 0) {
 					if (check.paymentStatus == 2) {
