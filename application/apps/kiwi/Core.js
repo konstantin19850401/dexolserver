@@ -3,34 +3,20 @@ const path = require("path");
 const fs = require('fs');
 const NodeRSA = require('node-rsa');
 const request = require("request");
-<<<<<<< HEAD
-
-
-class Kiwi {
-	#core;#connector;#toolbox;#api;#HttpStatuses;
-=======
 const Api = require("./Api");
 
 
 class Kiwi {
 	#name = "kiwi";#core;#connector;#toolbox;#api;#HttpStatuses;
->>>>>>> 666a3f8e21273468c96b4834ea27d213b660a424
 	#agents = [];
 	constructor(...args) {
 		this.#core = args[0];
 		this.#connector = this.#core.Connector;
 		this.#toolbox = this.#core.Toolbox;
-<<<<<<< HEAD
-=======
 		this.#api = new Api(this.#core);
 		this.#HttpStatuses = this.#core.HttpStatuses;
->>>>>>> 666a3f8e21273468c96b4834ea27d213b660a424
 		this.#api = new Api(this.#core);
-		this.#HttpStatuses = this.#core.HttpStatuses;
 		this.#Init();
-<<<<<<< HEAD
-	}
-=======
 	}
 	get Name() { return this.#name; }
 	PaymentsList(filter) {
@@ -48,7 +34,6 @@ class Kiwi {
 		}
 
 	}
->>>>>>> 666a3f8e21273468c96b4834ea27d213b660a424
 	async #Init() {
 		let rows = await this.#connector.Request("dexol", `
 			SELECT * FROM \`dicts_data\`
@@ -56,8 +41,6 @@ class Kiwi {
 		`);
 		for (let row of rows) {
 			this.#agents.push(new KiwiAgent(row, this.#connector, this.#toolbox));
-<<<<<<< HEAD
-=======
 		}
 	}
 
@@ -72,13 +55,10 @@ class Kiwi {
 		} else {
 			if (packet.subcom != "api") response.end(new Packet({subcom: packet.subcom, status: this.#HttpStatuses.OK, message: "Ok"}).ToString());
 			allowed.find(item=> item.name == packet.subcom).method(packet, users, response, this);
->>>>>>> 666a3f8e21273468c96b4834ea27d213b660a424
 		}
 	}
 }
 
-<<<<<<< HEAD
-=======
 module.exports = Kiwi;
 
 class Packet {
@@ -96,7 +76,6 @@ class Packet {
 	ToString() { return JSON.stringify(this.#packet); }
 }
 
->>>>>>> 666a3f8e21273468c96b4834ea27d213b660a424
 
 class KiwiAgent {
 	#id;#connector;#toolbox;
@@ -143,11 +122,7 @@ class KiwiTerminal {
 	#id;#connector;#toolbox;#agent;
 	#uid;#serial;#title;#persons = [];#status;
 	#software = "Dealer v0";
-<<<<<<< HEAD
-	#tasks = [];
-=======
 	#tasks = [];#maxPayment = 110;
->>>>>>> 666a3f8e21273468c96b4834ea27d213b660a424
 	constructor(row, connector, toolbox, agent) {
 		this.#id = row.record_id;
 		this.#connector = connector;
@@ -176,41 +151,6 @@ class KiwiTerminal {
 			`);
 			for (let row of rows) {
 				this.#persons.push(new KiwiPerson(row, this.#connector, this.#toolbox, this));
-<<<<<<< HEAD
-			}
-		}
-	}
-	// переработать
-	async GetBalance(personUid) {
-		return new Promise((resolve, reject)=> {
-			let person = this.#persons.find(item=> item.Uid == personUid);
-			if (person) {
-				let xml = `<?xml version="1.0" encoding="windows-1251"?><request><client serial="" terminal="${this.#terminal.Uid}" software="${this.#software}"/><agents><getBalance/></agents></request>`;
-				let sign = person.PersonRSA.sign(xml, "base64");
-				let data = {
-					url: 'https://xml1.qiwi.com/xmlgate/xml.jsp',
-					headers: {
-						"Content-Type" : "text/XML",
-						"X-Digital-Sign" : sign,
-						"X-Digital-Sign-Alg": "SHA1withRSA",
-						"X-Digital-Sign-Login": person.Login
-					},
-					body: xml
-				}
-				request.post(data, (err, response, body)=> {
-					if (err) {
-						console.log("err=> ", err);
-						resolve({status: 2});
-					}
-					console.log(body);
-					resolve(null)
-				});
-			} else {
-				resolve({status: 1});
-			}
-		});
-	}
-=======
 			}
 		}
 		// а теперь задачи-пополняшки
@@ -273,16 +213,11 @@ class KiwiTerminal {
 			}
 		});
 	}
->>>>>>> 666a3f8e21273468c96b4834ea27d213b660a424
 	async GetLastId(personUid) {
 		return new Promise((resolve, reject)=> {
 			let person = this.#persons.find(item=> item.Uid == personUid);
 			if (person) {
-<<<<<<< HEAD
-				let xml = `<?xml version="1.0" encoding="windows-1251"?><request><client terminal="${this.#terminal.Uid}" software="${this.#software}"/><terminals><getLastIds/></terminals></request>`;
-=======
 				let xml = `<?xml version="1.0" encoding="windows-1251"?><request><client terminal="${this.#uid}" software="${this.#software}"/><terminals><getLastIds/></terminals></request>`;
->>>>>>> 666a3f8e21273468c96b4834ea27d213b660a424
 				let sign = person.PersonRSA.sign(xml, "base64");
 				let data = {
 					url: 'https://xml1.qiwi.com/xmlgate/xml.jsp',
@@ -318,23 +253,14 @@ class KiwiTerminal {
 			}
 		});
 	}
-<<<<<<< HEAD
-	async CheckPayment(personUid, payment) {
-		return new Promise(()=> {
-=======
 	async CheckPaymentRequisites(personUid, payment) {
 		return new Promise((resolve, reject)=> {
->>>>>>> 666a3f8e21273468c96b4834ea27d213b660a424
 			let person = this.#persons.find(item=> item.Uid == personUid);
 			if (person) {
 				let moment = this.#toolbox.Moment();
 				let date = moment().format("YYYY-MM-DDThh:mm:ss");
-<<<<<<< HEAD
-				let xml = `<?xml version="1.0" encoding="windows-1251"?><request><client terminal="${this.#terminal.Uid}" software="${this.#software}"/><providers><checkPaymentRequisites><payment id="${payment.id}"><from currency="643" amount="${payment.amount}.00"/><to currency="643" service="${payment.service}" amount="${payment.amount}.00" account="${payment.number}"/><receipt id="${payment.id}" date="${payment.date}"/></payment></checkPaymentRequisites></providers></request>`;
-=======
 				let xml = `<?xml version="1.0" encoding="windows-1251"?><request><client terminal="${this.#uid}" software="${this.#software}"/><providers><checkPaymentRequisites><payment id="${payment.id}"><from currency="643" amount="${payment.amount}.00"/><to currency="643" service="${payment.service}" amount="${payment.amount}.00" account="${payment.num}"/><receipt id="${payment.id}" date="${payment.date}"/></payment></checkPaymentRequisites></providers></request>`;
 
->>>>>>> 666a3f8e21273468c96b4834ea27d213b660a424
 				let sign = person.PersonRSA.sign(xml, "base64");
 				let data = {
 					url: 'https://xml1.qiwi.com/xmlgate/xml.jsp',
@@ -355,15 +281,9 @@ class KiwiTerminal {
 						if (json?.response?.$?.result == 0) {
 							if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.$?.result == 0) {
 								if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.status == 3) {
-<<<<<<< HEAD
-									resolve({status: 3});
-								} else if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.status == 0) {
-									resolve({status: 0});
-=======
 									resolve({status: 0});
 								} else if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.status == 0) {
 									resolve({status: 3});
->>>>>>> 666a3f8e21273468c96b4834ea27d213b660a424
 								} else {
 									resolve({status: 1});
 								}
@@ -378,75 +298,13 @@ class KiwiTerminal {
 			} else {
 				resolve({status: 1});
 			}
-<<<<<<< HEAD
 		});
 	}
 	async #AddOfflinePayment(personUid, payment) {
-		return new Promise(()=> {
-			let person = this.#persons.find(item=> item.Uid == personUid);
-			if (person) {
-				let moment = this.#toolbox.Moment();
-				let xml = `<?xml version="1.0" encoding="windows-1251"?><request><client terminal="${this.#terminal.Uid}" software="${this.#software}"/><providers><addOfflinePayment><payment id="${payment.id}"><from currency="643" amount="${payment.amount}.00"/><to currency="643" service="${payment.service}" amount="${payment.amount}.00" account="${payment.number}" moneyType="0"/><receipt id="${payment.id}" date="${payment.date}"/></payment></addOfflinePayment></providers></request>`;
-				let sign = person.PersonRSA.sign(xml, "base64");
-				let data = {
-					url: 'https://xml1.qiwi.com/xmlgate/xml.jsp',
-					headers: {
-						"Content-Type" : "text/XML",
-						"X-Digital-Sign" : sign,
-						"X-Digital-Sign-Alg": "SHA1withRSA",
-						"X-Digital-Sign-Login": person.Login
-					},
-					body: xml
-				}
-				if (amount < 100) {
-					request.post(data, async (err, response, body)=> {
-						if (err) {
-							console.log("err=> ", err);
-							resolve({status: 2});
-						} else {
-							console.log("===> ", body);
-							let json = await this.#toolbox.XmlToString(body);
-							console.log("json=> ", JSON.stringify(json));
-
-							if (json?.response?.$?.result == 0) {
-								// if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.$?.result == 0) {
-								// 	// теперь проверить сам платеж
-								// 	if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.status == 3) {
-								// 		resolve({status: 3, date: date});
-								// 	} else if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.status == 0) {
-								// 		resolve({status: 0});
-								// 	} else {
-								// 		resolve({status: 1});
-								// 	}
-								// } else {
-								// 	resolve({status: -3});
-								// }
-							} else {
-								resolve({status: 3, result: json?.response?.$?.result});
-							}
-						}
-					});
-				} else {
-					resolve({status: -2});
-				}
-			} else {
-				resolve({status: 1});
-			}
-		});
-	}
-	async GetPaymentStatus(personUid, payment) {
-=======
-		});
-	}
-	async #AddOfflinePayment(personUid, payment) {
->>>>>>> 666a3f8e21273468c96b4834ea27d213b660a424
 		return new Promise((resolve, reject)=> {
 			let person = this.#persons.find(item=> item.Uid == personUid);
 			if (person) {
 				let moment = this.#toolbox.Moment();
-<<<<<<< HEAD
-				let xml = `<?xml version="1.0" encoding="windows-1251"?><request><client terminal="${this.#terminal.Uid}" software="${this.#software}"/><providers><getPaymentStatus><payment id="${payment.id}"/></getPaymentStatus></providers></request>`;
-=======
 				let xml = `<?xml version="1.0" encoding="windows-1251"?><request><client terminal="${this.#uid}" software="${this.#software}"/><providers><addOfflinePayment><payment id="${payment.id}"><from currency="643" amount="${payment.amount}.00"/><to currency="643" service="${payment.service}" amount="${payment.amount}.00" account="${payment.num}" moneyType="0"/><receipt id="${payment.id}" date="${payment.date}"/></payment></addOfflinePayment></providers></request>`;
 				let sign = person.PersonRSA.sign(xml, "base64");
 				let data = {
@@ -493,7 +351,6 @@ class KiwiTerminal {
 			if (person) {
 				let moment = this.#toolbox.Moment();
 				let xml = `<?xml version="1.0" encoding="windows-1251"?><request><client terminal="${this.#uid}" software="${this.#software}"/><providers><getPaymentStatus><payment id="${payment.id}"/></getPaymentStatus></providers></request>`;
->>>>>>> 666a3f8e21273468c96b4834ea27d213b660a424
 				let sign = person.PersonRSA.sign(xml, "base64");
 				let data = {
 					url: 'https://xml1.qiwi.com/xmlgate/xml.jsp',
@@ -513,28 +370,10 @@ class KiwiTerminal {
 						let json = await this.#toolbox.XmlToString(body);
 						if (json?.response?.$?.result == 0) {
 							if (json?.response?.providers[0]?.getPaymentStatus[0]?.$?.result == 0) {
-<<<<<<< HEAD
-								console.log("=> ", json?.response?.providers[0]?.getPaymentStatus[0]?.payment[0]);
-								if (json?.response?.providers[0]?.getPaymentStatus[0]?.payment[0]?.$?.result == 0) {
-									let payment = json?.response?.providers[0]?.getPaymentStatus[0]?.payment[0]?.$;
-									console.log("все норм ", payment);
-									resolve({status: 0, paymentStatus: parseInt(payment?.status)});
-								} else resolve({status: -1, result: json?.response?.providers[0]?.getPaymentStatus[0]?.payment[0]?.$?.result});
-
-							// 	// теперь проверить сам платеж
-							// 	if (json?.response?.providers[0]?.getPaymentStatus[0]?.payment[0]?.$?.status == 3) {
-							// // 		resolve({status: 3, date: date});
-							// // 	} else if (json?.response?.providers[0]?.getPaymentStatus[0]?.payment[0]?.$?.status == 0) {
-							// // 		resolve({status: 0});
-							// 	} else {
-							// 		resolve({status: 1});
-							// 	}
-=======
 								if (json?.response?.providers[0]?.getPaymentStatus[0]?.payment[0]?.$?.result == 0) {
 									let payment = json?.response?.providers[0]?.getPaymentStatus[0]?.payment[0]?.$;
 									resolve({status: 0, paymentStatus: parseInt(payment?.status)});
 								} else resolve({status: -1, result: json?.response?.providers[0]?.getPaymentStatus[0]?.payment[0]?.$?.result});
->>>>>>> 666a3f8e21273468c96b4834ea27d213b660a424
 							} else {
 								resolve({status: 4, result: json?.response?.providers[0]?.getPaymentStatus[0]?.$?.result});
 							}
@@ -548,41 +387,6 @@ class KiwiTerminal {
 			}
 		});
 	}
-<<<<<<< HEAD
-}
-
-class KiwiPerson {
-	#id;#connector;#toolbox;#terminal;
-	#uid;#login;#status;#title;#personDir;
-	#nodeRSA;#publicKey;#privateKey;#ifIssetCert = false;
-	constructor(row, connector, toolbox, terminal) {
-		this.#id = row.record_id;
-		this.#connector = connector;
-		this.#toolbox = toolbox;
-		this.#terminal = terminal;
-		this.#Init(row);
-	}
-	get Uid() { return this.#uid; }
-	get Id() { return this.#id; }
-	get Status() { return this.#status; }
-	get Login() { return this.#login; }
-	get PersonRSA() { return this.#nodeRSA; }
-
-	async #Init(row) {
-		let data = JSON.parse(row.data);
-		this.#uid = data?.uid;
-		this.#login = data?.login;
-		this.#status = data?.status || 0;
-		this.#title = data?.title;
-		this.#personDir = path.normalize(`${__dirname}/certs/${this.#terminal.Uid}/${this.#login}/`);
-		await this.#LoadCerts();
-	}
-	async #LoadCerts() {
-		try {
-			fs.mkdirSync(this.#personDir, { recursive: true });
-			this.#publicKey = FS.readFileSync(`${this.#personDir}public.key`, "utf8");
-			this.#privateKey = FS.readFileSync(`${this.#personDir}private.key`, "utf8");
-=======
 	async GetProviderByPhone(personUid, payment) {
 		return new Promise((resolve, reject)=> {
 			let person = this.#persons.find(item=> item.Uid == personUid);
@@ -703,7 +507,6 @@ class KiwiPerson {
 			fs.mkdirSync(this.#personDir, { recursive: true });
 			this.#publicKey = fs.readFileSync(`${this.#personDir}public.key`, "utf8");
 			this.#privateKey = fs.readFileSync(`${this.#personDir}private.key`, "utf8");
->>>>>>> 666a3f8e21273468c96b4834ea27d213b660a424
 			this.#nodeRSA = new NodeRSA();
 			this.#nodeRSA.setOptions({signingScheme: "sha1"});
 			this.#nodeRSA.importKey(this.#privateKey, "pkcs8");
@@ -717,15 +520,9 @@ class KiwiPerson {
 		return new Promise((resolve, reject)=> {
 			this.#nodeRSA = new NodeRSA();
 			this.#nodeRSA.generateKeyPair(1024);
-<<<<<<< HEAD
-			FS.mkdirSync(this.#personDir, { recursive: true });
-			FS.writeFileSync(`${this.#personDir}public.key`, this.#nodeRSA.exportKey("pkcs8-public"));
-			FS.writeFileSync(`${this.#personDir}private.key`, this.#nodeRSA.exportKey("pkcs8"));
-=======
 			fs.mkdirSync(this.#personDir, { recursive: true });
 			fs.writeFileSync(`${this.#personDir}public.key`, this.#nodeRSA.exportKey("pkcs8-public"));
 			fs.writeFileSync(`${this.#personDir}private.key`, this.#nodeRSA.exportKey("pkcs8"));
->>>>>>> 666a3f8e21273468c96b4834ea27d213b660a424
 			let oneTimePassword = password;
 			let md5Password = cryptoJs.MD5(oneTimePassword).toString();
 			let arr = this.#nodeRSA.exportKey("pkcs8-public").split("\n");
@@ -749,11 +546,7 @@ class KiwiPerson {
 						</persons>
 				</request>`
 			}
-<<<<<<< HEAD
-			request.post(data, (err, response, body)=> {
-=======
 			request.post(data, async (err, response, body)=> {
->>>>>>> 666a3f8e21273468c96b4834ea27d213b660a424
 				if (err) console.log("err=> ", err);
 				console.log(body);
 				await this.#LoadCerts();
@@ -763,8 +556,6 @@ class KiwiPerson {
 	}
 }
 
-<<<<<<< HEAD
-=======
 class PaymentsTask {
 	#id;#terminal;#person;#status;#connector;#toolbox;#creationDate;#clearMethod;#tick;
 	#minInterval;#maxInterval;#list;#operator;#data;
@@ -859,7 +650,6 @@ class PaymentsTask {
 	}
 }
 
->>>>>>> 666a3f8e21273468c96b4834ea27d213b660a424
 
 const kiwiErrors = {
 	0: "Ok",

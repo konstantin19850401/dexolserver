@@ -11,7 +11,6 @@ class Auth {
 	static get ConnectorName() { return CONNECTOR_NAME; }
 
 	async #InitSession(packet, users, response) {
-		console.log(packet);
 		let obj = {};
 		if (packet?.data?.login && packet?.data?.password) {
 			let rpacket;
