@@ -19,20 +19,14 @@ class Kiwi {
 		this.#Init();
 	}
 	get Name() { return this.#name; }
-	PaymentsList(filter) {
-		return [];
-
-	}
-	async UpdateTerminalPaymentsList(terminalUid) {
-		let terminal;
+	get PaymentsList() {
+		let rows = [];
 		for (let agent of this.#agents) {
-			terminal = agent.Terminals.find(item=> item.Uid == terminalUid);
-			if (terminal) {
-				terminal.UpdatePaymentsList();
-				break;
+			for (let terminal of agent.Terminals) {
+				terminal.PaymentsList.forEach(item=> rows.push(item.Data));
 			}
 		}
-
+		return rows;
 	}
 	async #Init() {
 		let rows = await this.#connector.Request("dexol", `
@@ -44,6 +38,16 @@ class Kiwi {
 		}
 	}
 
+	async UpdateTerminalPaymentsList(terminalUid) {
+		let terminal;
+		for (let agent of this.#agents) {
+			terminal = agent.Terminals.find(item=> item.Uid == terminalUid);
+			if (terminal) {
+				terminal.UpdatePaymentsList();
+				break;
+			}
+		}
+	}
 
 	Check(packet, users, response) {
 		let allowed = [
@@ -123,6 +127,7 @@ class KiwiTerminal {
 	#uid;#serial;#title;#persons = [];#status;
 	#software = "Dealer v0";
 	#tasks = [];#maxPayment = 110;
+	#paymentsList = [];
 	constructor(row, connector, toolbox, agent) {
 		this.#id = row.record_id;
 		this.#connector = connector;
@@ -136,10 +141,11 @@ class KiwiTerminal {
 	get Serial() { return this.#serial; }
 	get Status() { return this.#status; }
 	get Software() { return this.#software; }
+	get PaymentsList() { return this.#paymentsList; }
 
 	async #Init(row) {
 		let data = JSON.parse(row.data);
-		this.#uid = data?.uid;
+		this.#uid = parseInt(data?.uid);
 		this.#serial = data?.serial;
 		this.#title = data?.title;
 		this.#status = data?.status || 0;
@@ -164,13 +170,14 @@ class KiwiTerminal {
 	async UpdatePaymentsList() {
 		let rows = await this.#connector.Request("dexol", `
 			SELECT * FROM \`kiwi_payments_list\`
-			WHERE terminal = '${this.#uid}' AND status = '1'
+			WHERE terminal = '${this.#uid}'
 		`);
 		for (let row of rows) {
 			let task = this.#tasks.find(item=> item.Id == row.id);
 			if (!task) {
-				console.log("такой задачи нет, добавляем");
-				this.#tasks.push(new PaymentsTask(row, this.#connector, this.#toolbox, this, ()=> { this.#ClearCompletedTasks() } ));
+				let paymentTask = new PaymentsTask(row, this.#connector, this.#toolbox, this, ()=> { this.#ClearCompletedTasks() } );
+				this.#paymentsList.push(paymentTask);
+				this.#tasks.push(paymentTask);
 			}
 		}
 	}
@@ -558,7 +565,7 @@ class KiwiPerson {
 
 class PaymentsTask {
 	#id;#terminal;#person;#status;#connector;#toolbox;#creationDate;#clearMethod;#tick;
-	#minInterval;#maxInterval;#list;#operator;#data;
+	#minInterval;#maxInterval;#list;#operator;#data;#comment;
 	#cnt = 0;#ignoreStatuses = [0,1,4,5,6,7,8,9,10];
 	#paymentStatusCheck = [];
 	constructor(row, connector, toolbox, terminal, clearMethod) {
@@ -575,15 +582,29 @@ class PaymentsTask {
 	get Status() { return this.#status; }
 	get Id() { return this.#id; }
 	get Person() { return this.#person; }
+	get Data() {
+		return {
+			id: this.#id,
+			terminal: this.#terminal.Uid,
+			person: this.#person,
+			date: this.#creationDate,
+			comment: this.#comment,
+			list: this.#list,
+			status: this.#status,
+		}
+	}
 
 	#Init(row) {
 		this.#data = JSON.parse(row.data);
 		this.#minInterval = this.#data?.minInterval || 10;
 		this.#maxInterval = this.#data?.maxInterval || 25;
 		this.#operator = this.#data?.operator;
+		this.#comment = this.#data?.comment || "";
 		this.#list = this.#data.list;
-		this.#SetDates();
-		this.#tick = setInterval(async ()=> { await this.#CheckPayment() }, 15000);
+		if (this.#status == 1) {
+			this.#SetDates();
+			this.#tick = setInterval(async ()=> { await this.#CheckPayment() }, 15000);
+		}
 	}
 	#SetDates() {
 		let moment = this.#toolbox.Moment()();

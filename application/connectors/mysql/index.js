@@ -22,7 +22,7 @@ class Mysql {
             this.#Connect(name)?.getConnection((err, connection) => {
                 if (err) {
                     this.#PrintError(name, string, err);
-                    resolve( null );
+                    reject( null );
                 } else {
                     connection.query(string, (err, result, fields) => {
                         if (err) this.#PrintError(name, string, err);

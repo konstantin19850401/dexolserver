@@ -14,10 +14,36 @@ class Api {
 		user.CloseConnection(rpacket.ToString());
 	}
 	#GetPaymentsList(packet, users, application) {
-		let list = application.PaymentsList();
+		let paymentsList = application.PaymentsList;
+		let list = [];
+		for (let item of paymentsList) {
+			list.push(Object.fromEntries(Object.entries(item).filter(([key]) => key != "list")));
+		}
+		//packet.data.filter = [{name: "id", value: 12}, {name: "terminal", value: "10746127"}];
+		if (packet.data.filter && Array.isArray(packet.data.filter)) {
+			list = list.filter(item=> {
+				return packet.data.filter.every(fitem=> item[fitem.name] == fitem.value)
+			})
+		}
 		let data = {action: packet.data.action, list: list};
 		let rpacket = new Packet({status: this.#HTTP_STATUSES.OK, data: data, hash: packet.hash});
-
+		let user = users.find(item => item.Uid == packet.uid);
+		user.CloseConnection(rpacket.ToString());
+	}
+	#GetPayment(packet, users, application) {
+		let errs = [];
+		let status = this.#HTTP_STATUSES.BAD_REQUEST;
+		let data = {action: packet.data.action};
+		if (!packet?.data?.id) errs.push("Вы не указали id записи");
+		else {
+			let payment = application.paymentsList.filter(item=> item.id == packet.data.id);
+			if (payment.length == 0) status = this.#HTTP_STATUSES.NOT_FOUND
+			else {
+				status = this.#HTTP_STATUSES.OK;
+				data.payment = payment
+			}
+		}
+		let rpacket = new Packet({status: status, data: data, hash: packet.hash});
 		let user = users.find(item => item.Uid == packet.uid);
 		user.CloseConnection(rpacket.ToString());
 	}
@@ -40,7 +66,7 @@ class Api {
 
 		let data = {action: packet.data.action};
 		if (errs.length == 0) {
-			let data = {list: [], minInterval: packet.data.task.minInterval, maxInterval: packet.data.task.maxInterval, operator: packet.data.task.operator};
+			let jdata = {list: [], minInterval: packet.data.task.minInterval, maxInterval: packet.data.task.maxInterval, operator: packet.data.task.operator, comment: packet?.data?.comment || ""};
 			for (let item of packet.data.task.list) {
 				if (!this.#core.Toolbox.IsNumber(item.num) || item.num.toString().length != 10) {
 					errs.push("Ошибочная длина номера");
@@ -51,7 +77,7 @@ class Api {
 					break;
 				}
 				item.hash = this.#core.Toolbox.GenerateUniqueHash();
-				data.list.push(item);
+				jdata.list.push(item);
 			}
 			if (errs.length == 0) {
 				let moment = this.#core.Toolbox.Moment();
@@ -60,7 +86,7 @@ class Api {
 				let terminal = "10746127";
 				let result = await this.#connector.Request("dexol", `
 					INSERT INTO kiwi_payments_list
-					SET terminal = '${terminal}', person = '13250871', data = '${JSON.stringify(data)}', date = '${cdate.format("YYYY-MM-DDTHH:mm:ss")}', status = '1'
+					SET terminal = '${terminal}', person = '13250871', data = '${JSON.stringify(jdata)}', date = '${cdate.format("YYYY-MM-DDTHH:mm:ss")}', status = '1'
 				`);
 				if (!result || result.affectedRows != 1) errs.push("Ошибка в процессе добавления записи");
 				else {
@@ -79,7 +105,7 @@ class Api {
 		let allowed = [
 			{name: "getAppData",           method: (...args) => { this.#GetAppData(...args) } },
 			{name: "getPaymentsList",      method: (...args) => { this.#GetPaymentsList(...args) } },
-			{name: "newTask",      method: (...args) => { this.#NewTask(...args) } },
+			{name: "newTask",              method: (...args) => { this.#NewTask(...args) } },
 			// {name: }
 		];
 		if (!allowed.find(item=> item.name == packet?.data?.action)) {

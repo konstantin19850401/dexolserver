@@ -8,6 +8,7 @@ class HttpStatuses {
 	static get BAD_REQUEST() { return 400; }
 	static get UNAUTHORIZED() { return 401; }
 	static get FORBIDDEN() { return 403; }
+	static get NOT_FOUND() { return 404; }
 	static get METHOD_NOT_ALLOWED() { return 405; }
 	static get CONFLICT() { return 409; }
 	static get LOCKED() { return 423; }
