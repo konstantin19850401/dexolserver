@@ -36,13 +36,14 @@ class Api {
 		let data = {action: packet.data.action};
 		if (!packet?.data?.id) errs.push("Вы не указали id записи");
 		else {
-			let payment = application.paymentsList.filter(item=> item.id == packet.data.id);
-			if (payment.length == 0) status = this.#HTTP_STATUSES.NOT_FOUND
+			let payment = application.PaymentsList.filter(item=> item.id == packet.data.id);
+			if (!payment) status = this.#HTTP_STATUSES.NOT_FOUND
 			else {
 				status = this.#HTTP_STATUSES.OK;
 				data.payment = payment
 			}
 		}
+		if (errs.length > 0) data.errs = errs;
 		let rpacket = new Packet({status: status, data: data, hash: packet.hash});
 		let user = users.find(item => item.Uid == packet.uid);
 		user.CloseConnection(rpacket.ToString());
@@ -105,6 +106,7 @@ class Api {
 		let allowed = [
 			{name: "getAppData",           method: (...args) => { this.#GetAppData(...args) } },
 			{name: "getPaymentsList",      method: (...args) => { this.#GetPaymentsList(...args) } },
+			{name: "getPayment",           method: (...args) => { this.#GetPayment(...args) } },
 			{name: "newTask",              method: (...args) => { this.#NewTask(...args) } },
 			// {name: }
 		];
