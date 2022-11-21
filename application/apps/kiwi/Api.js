@@ -81,6 +81,7 @@ class Api {
 				jdata.list.push(item);
 			}
 			if (errs.length == 0) {
+				jdata.list = this.#core.Toolbox.ShuffleArray(jdata.list); // перемешаем
 				let moment = this.#core.Toolbox.Moment();
 				let cdate = moment();
 				console.log(cdate.format("YYYY-MM-DDTHH:mm:ss"));

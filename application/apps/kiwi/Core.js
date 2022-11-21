@@ -603,7 +603,7 @@ class PaymentsTask {
 		this.#list = this.#data.list;
 		if (this.#status == 1) {
 			this.#SetDates();
-			this.#tick = setInterval(async ()=> { await this.#CheckPayment() }, 15000);
+			// this.#tick = setInterval(async ()=> { await this.#CheckPayment() }, 15000);
 		}
 	}
 	#SetDates() {
