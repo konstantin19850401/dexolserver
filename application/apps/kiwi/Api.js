@@ -67,7 +67,7 @@ class Api {
 
 		let data = {action: packet.data.action};
 		if (errs.length == 0) {
-			let jdata = {list: [], minInterval: packet.data.task.minInterval, maxInterval: packet.data.task.maxInterval, operator: packet.data.task.operator, comment: packet?.data?.comment || ""};
+			let jdata = {list: [], minInterval: packet.data.task.minInterval, maxInterval: packet.data.task.maxInterval, operator: packet.data.task.operator, comment: packet?.data?.task?.comment || ""};
 			for (let item of packet.data.task.list) {
 				if (!this.#core.Toolbox.IsNumber(item.num) || item.num.toString().length != 10) {
 					errs.push("Ошибочная длина номера");
@@ -83,11 +83,11 @@ class Api {
 			if (errs.length == 0) {
 				let moment = this.#core.Toolbox.Moment();
 				let cdate = moment();
-				// let paymentDate = moment().format("YYYY-MM-DDTHH:mm:ss");
 				let terminal = "10746127";
+				let person = "13250871";
 				let result = await this.#connector.Request("dexol", `
 					INSERT INTO kiwi_payments_list
-					SET terminal = '${terminal}', person = '13250871', data = '${JSON.stringify(jdata)}', date = '${cdate.format("YYYY-MM-DDTHH:mm:ss")}', status = '1'
+					SET terminal = '${terminal}', person = '${person}', data = '${JSON.stringify(jdata)}', date = '${cdate.format("YYYY-MM-DDTHH:mm:ss")}', status = '1'
 				`);
 				if (!result || result.affectedRows != 1) errs.push("Ошибка в процессе добавления записи");
 				else {
