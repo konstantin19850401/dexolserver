@@ -83,6 +83,7 @@ class Api {
 			if (errs.length == 0) {
 				let moment = this.#core.Toolbox.Moment();
 				let cdate = moment();
+				console.log(cdate.format("YYYY-MM-DDTHH:mm:ss"));
 				let terminal = "10746127";
 				let person = "13250871";
 				let result = await this.#connector.Request("dexol", `

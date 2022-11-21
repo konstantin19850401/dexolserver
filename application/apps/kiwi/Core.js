@@ -37,7 +37,6 @@ class Kiwi {
 			this.#agents.push(new KiwiAgent(row, this.#connector, this.#toolbox));
 		}
 	}
-
 	async UpdateTerminalPaymentsList(terminalUid) {
 		let terminal;
 		for (let agent of this.#agents) {
@@ -589,6 +588,7 @@ class PaymentsTask {
 			person: this.#person,
 			date: this.#creationDate,
 			comment: this.#comment,
+			sum: this.#list.reduce((total, item)=> total + parseInt(item.amount), 0),
 			list: this.#list,
 			status: this.#status,
 		}
@@ -649,7 +649,6 @@ class PaymentsTask {
 			}
 		}
 	}
-
 	async #Complete() {
 		this.#status = 0;
 		let result = await this.#connector.Request("dexol", `
