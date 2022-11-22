@@ -564,7 +564,7 @@ class KiwiPerson {
 
 class PaymentsTask {
 	#id;#terminal;#person;#status;#connector;#toolbox;#creationDate;#clearMethod;#tick;
-	#minInterval;#maxInterval;#list;#operator;#data;#comment;
+	#minInterval;#maxInterval;#list;#data;#comment;#delayed = 0;#dateStart;
 	#cnt = 0;#ignoreStatuses = [0,1,4,5,6,7,8,9,10];
 	#paymentStatusCheck = [];
 	constructor(row, connector, toolbox, terminal, clearMethod) {
@@ -598,16 +598,29 @@ class PaymentsTask {
 		this.#data = JSON.parse(row.data);
 		this.#minInterval = this.#data?.minInterval || 10;
 		this.#maxInterval = this.#data?.maxInterval || 25;
-		this.#operator = this.#data?.operator;
 		this.#comment = this.#data?.comment || "";
+		this.#delayed = this.#data?.delayed == 1 ? this.#data.delayed : 0;
+		this.#dateStart = this.#delayed == 1 ? this.#data.dateStart : null;
 		this.#list = this.#data.list;
 		if (this.#status == 1) {
 			this.#SetDates();
-			// this.#tick = setInterval(async ()=> { await this.#CheckPayment() }, 15000);
+			this.#tick = setInterval(async ()=> { await this.#CheckPayment() }, 15000);
 		}
 	}
 	#SetDates() {
-		let moment = this.#toolbox.Moment()();
+		let moment;
+		let cmoment = this.#toolbox.Moment()();
+		if (this.#delayed == 1) {
+			console.log("отложенная задача");
+			let dateStart = this.#toolbox.Moment()(this.#dateStart);
+			console.log("dateStart=> ", dateStart);
+			if (dateStart.isAfter(cmoment)) moment = dateStart;
+			else {
+				moment = cmoment;
+			}
+		} else {
+			moment = this.#toolbox.Moment()();
+		}
 		for (let item of this.#list) {
 			if (this.#ignoreStatuses.indexOf(item.status) == -1) {
 				let randMin =  this.#toolbox.RandomPositiveInt(this.#minInterval, this.#maxInterval);
@@ -623,10 +636,13 @@ class PaymentsTask {
 		if (!payment) {
 			if (this.#paymentStatusCheck.length == 0) await this.#Complete();
 		} else {
+			let start = true;
 			let moment = this.#toolbox.Moment();
 			let currentDate = moment();
 			let paymentDate = moment(payment.date).format("YYYY-MM-DDTHH:mm:ss");
-			if (currentDate.isAfter(paymentDate)) {
+			if (currentDate.isAfter(paymentDate) && start) {
+				console.log("отправляем платеж");
+				payment.status = 0;
 				await this.#terminal.SendPayment(payment, this);
 			}
 		}

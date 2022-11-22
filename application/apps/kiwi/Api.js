@@ -51,9 +51,17 @@ class Api {
 	async #NewTask(packet, users, application) {
 		let errs = [];
 		let status = this.#HTTP_STATUSES.BAD_REQUEST;
+		let moment = this.#core.Toolbox.Moment();
 		if (!packet?.data?.task?.person) errs.push("Вы не указали персону");
-		if (!packet?.data?.task?.turnType) errs.push("Вы не указали тип обработки очереди");
-		if (!packet?.data?.task?.operator) errs.push("Вы не указали оператора");
+		if (packet?.data?.task?.delayed && packet.data.task.delayed == 1) {
+			if (!packet?.data?.task?.dateStart) errs.push("Вы указали, что задача должна быть отложенной, но не указали дату начала исполнения задачи.");
+			else {
+				let date = moment(packet.data.dateStart);
+				if (!date.isValid()) errs.push("Указанная дата отложенной задачи не валидна");
+			}
+		}
+		// if (!packet?.data?.task?.turnType) errs.push("Вы не указали тип обработки очереди");
+		// if (!packet?.data?.task?.operator) errs.push("Вы не указали оператора");
 
 		if (!packet?.data?.task?.minInterval || !packet?.data?.task?.maxInterval) errs.push("Вы не указали один из интервалов или оба");
 		else {
@@ -67,7 +75,12 @@ class Api {
 
 		let data = {action: packet.data.action};
 		if (errs.length == 0) {
-			let jdata = {list: [], minInterval: packet.data.task.minInterval, maxInterval: packet.data.task.maxInterval, operator: packet.data.task.operator, comment: packet?.data?.task?.comment || ""};
+			let jdata = {list: [], minInterval: packet.data.task.minInterval, maxInterval: packet.data.task.maxInterval, operator: "", comment: packet?.data?.task?.comment || ""};
+			// let jdata = {list: [], minInterval: packet.data.task.minInterval, maxInterval: packet.data.task.maxInterval, operator: packet.data.task.operator, comment: packet?.data?.task?.comment || ""};
+			if (packet?.data?.task?.delayed == 1) {
+				jdata.delayed = 1;
+				jdata.dateStart = moment(packet?.data?.task?.dateStart).format("YYYY-MM-DDTHH:mm");
+			}
 			for (let item of packet.data.task.list) {
 				if (!this.#core.Toolbox.IsNumber(item.num) || item.num.toString().length != 10) {
 					errs.push("Ошибочная длина номера");
@@ -82,9 +95,7 @@ class Api {
 			}
 			if (errs.length == 0) {
 				jdata.list = this.#core.Toolbox.ShuffleArray(jdata.list); // перемешаем
-				let moment = this.#core.Toolbox.Moment();
 				let cdate = moment();
-				console.log(cdate.format("YYYY-MM-DDTHH:mm:ss"));
 				let terminal = "10746127";
 				let person = "13250871";
 				let result = await this.#connector.Request("dexol", `
