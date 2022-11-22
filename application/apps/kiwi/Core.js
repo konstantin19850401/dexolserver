@@ -587,6 +587,7 @@ class PaymentsTask {
 			terminal: this.#terminal.Uid,
 			person: this.#person,
 			date: this.#creationDate,
+			dateStart: this.#dateStart,
 			comment: this.#comment,
 			sum: this.#list.reduce((total, item)=> total + parseInt(item.amount), 0),
 			list: this.#list,
@@ -600,7 +601,7 @@ class PaymentsTask {
 		this.#maxInterval = this.#data?.maxInterval || 25;
 		this.#comment = this.#data?.comment || "";
 		this.#delayed = this.#data?.delayed == 1 ? this.#data.delayed : 0;
-		this.#dateStart = this.#delayed == 1 ? this.#data.dateStart : null;
+		this.#dateStart = this.#delayed == 1 ? this.#data.dateStart : this.#creationDate;
 		this.#list = this.#data.list;
 		if (this.#status == 1) {
 			this.#SetDates();
@@ -641,7 +642,6 @@ class PaymentsTask {
 			let currentDate = moment();
 			let paymentDate = moment(payment.date).format("YYYY-MM-DDTHH:mm:ss");
 			if (currentDate.isAfter(paymentDate) && start) {
-				console.log("отправляем платеж");
 				payment.status = 0;
 				await this.#terminal.SendPayment(payment, this);
 			}
