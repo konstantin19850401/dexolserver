@@ -142,6 +142,9 @@ class KiwiTerminal {
 	get Software() { return this.#software; }
 	get PaymentsList() { return this.#paymentsList; }
 
+	PrintMessage(message) {
+		console.log(message);
+	}
 	async #Init(row) {
 		let data = JSON.parse(row.data);
 		this.#uid = parseInt(data?.uid);
@@ -289,14 +292,18 @@ class KiwiTerminal {
 								if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.status == 3) {
 									resolve({status: 0});
 								} else if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.status == 0) {
+									this.#PrintMessage(body)
 									resolve({status: 3});
 								} else {
+									this.#PrintMessage(body)
 									resolve({status: 1});
 								}
 							} else {
+								this.#PrintMessage(body)
 								resolve({status: 4, result: json?.response?.providers[0]?.checkPaymentRequisites[0]?.$?.result});
 							}
 						} else {
+							this.#PrintMessage(body)
 							resolve({status: 3, result: json?.response?.$?.result});
 						}
 					}
@@ -336,9 +343,11 @@ class KiwiTerminal {
 								if (json?.response?.providers[0]?.addOfflinePayment[0]?.$?.result == 0) {
 									resolve({status: 0});
 								} else {
+									this.#PrintMessage(body)
 									resolve({status: 4, result: json?.response?.providers[0]?.addOfflinePayment[0]?.$?.result});
 								}
 							} else {
+								this.#PrintMessage(body)
 								resolve({status: 3, result: json?.response?.$?.result});
 							}
 						}
