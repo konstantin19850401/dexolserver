@@ -125,8 +125,8 @@ class KiwiTerminal {
 	#id;#connector;#toolbox;#agent;
 	#uid;#serial;#title;#persons = [];#status;
 	#software = "Dealer v0";
-	#tasks = [];#maxPayment = 110;
-	#paymentsList = [];
+	#tasks = [];#maxPayment = 160;
+	#paymentsList = [];#isBusy = 0;
 	constructor(row, connector, toolbox, agent) {
 		this.#id = row.record_id;
 		this.#connector = connector;
@@ -141,7 +141,11 @@ class KiwiTerminal {
 	get Status() { return this.#status; }
 	get Software() { return this.#software; }
 	get PaymentsList() { return this.#paymentsList; }
+	get IsBusy() { return this.#isBusy; }
 
+	#PrintMessage(message) {
+		console.log(message);
+	}
 	async #Init(row) {
 		let data = JSON.parse(row.data);
 		this.#uid = parseInt(data?.uid);
@@ -278,25 +282,38 @@ class KiwiTerminal {
 					},
 					body: xml
 				}
+				// console.log("xml=> ", xml);
 				request.post(data, async (err, response, body)=> {
 					if (err) {
 						console.log("err=> ", err);
 						resolve({status: 2});
 					} else {
 						let json = await this.#toolbox.XmlToString(body);
+						// console.log(body);
 						if (json?.response?.$?.result == 0) {
 							if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.$?.result == 0) {
 								if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.status == 3) {
 									resolve({status: 0});
 								} else if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.status == 0) {
-									resolve({status: 3});
+									if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.result == 16) {
+										resolve({status: 16});
+									} else if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.result == 202) {
+										resolve({status: 202});
+									} else {
+										resolve({status: 3});
+									}
+									// this.#PrintMessage(body);
+
 								} else {
+									this.#PrintMessage(body)
 									resolve({status: 1});
 								}
 							} else {
+								this.#PrintMessage(body)
 								resolve({status: 4, result: json?.response?.providers[0]?.checkPaymentRequisites[0]?.$?.result});
 							}
 						} else {
+							this.#PrintMessage(body)
 							resolve({status: 3, result: json?.response?.$?.result});
 						}
 					}
@@ -336,9 +353,11 @@ class KiwiTerminal {
 								if (json?.response?.providers[0]?.addOfflinePayment[0]?.$?.result == 0) {
 									resolve({status: 0});
 								} else {
+									this.#PrintMessage(body)
 									resolve({status: 4, result: json?.response?.providers[0]?.addOfflinePayment[0]?.$?.result});
 								}
 							} else {
+								this.#PrintMessage(body)
 								resolve({status: 3, result: json?.response?.$?.result});
 							}
 						}
@@ -433,51 +452,105 @@ class KiwiTerminal {
 		});
 	}
 	async SendPayment(payment, task) {
-		console.log("отправляем платеж на сумму ", payment.amount, " для номера ", payment.num, " для задачи ", task.Id);
-		payment.status = 1;
-		let provider = await this.GetProviderByPhone(task.Person, payment);
-		if (provider.status != 0) {
-			payment.status = 7;
+		if (this.#isBusy == 0) {
+			console.log("отправляем платеж на сумму ", payment.amount, " для номера ", payment.num, " для задачи ", task.Id);
+			this.#isBusy = 1;
+			let methods = [
+				{method: async (...args)=> { return await this.GetProviderByPhone(...args); },     name: "GetProviderByPhone", errStatus: 7},
+				{method: async (...args)=> { return await this.GetLastId(...args); },              name: "GetLastId", errStatus: 3},
+				{method: async (...args)=> { return await this.GetBalance(...args); },             name: "GetBalance", errStatus: 10},
+				{method: async (...args)=> { return await this.CheckPaymentRequisites(...args); }, name: "CheckPaymentRequisites", errStatus: 4},
+				{method: async (...args)=> { return await this.#AddOfflinePayment(...args); },     name: "AddOfflinePayment", errStatus: 5},
+			];
+
+			for (let item of methods) {
+				let result = await item.method(task.Person, payment);
+				if (result.status != 0) {
+					if (item.name == "CheckPaymentRequisites") {
+						if (result.status == 16) payment.status = 16;
+						else if (result.status == 202) payment.status = 202;
+						else payment.status = 4;
+					} else {
+						payment.status = item.errStatus;
+					}
+					await task.SaveTaskData();
+					this.#isBusy = 0;
+					return;
+				}
+				if (item.name == "GetProviderByPhone") payment.service = result.id;
+				if (item.name == "GetLastId") payment.id = result.id + 1;
+				if (item.name == "GetBalance" && result.balance < payment.amount) {
+					payment.status = 8;
+					await task.SaveTaskData();
+					this.#isBusy = 0;
+					return;
+				}
+			}
+			payment.status = 6;
+			this.#isBusy = 0;
 			await task.SaveTaskData();
 			return;
 		}
-		payment.service = provider.id;
-		let lastPayment = await this.GetLastId(task.Person);
-		if (lastPayment.status != 0) {
-			payment.status = 3;
-			await task.SaveTaskData();
-			return;
-		}
-		payment.id = lastPayment.id + 1;
-		let agentBalance = await this.GetBalance(task.Person);
-		if (lastPayment.status != 0) {
-			payment.status = 10;
-			await task.SaveTaskData();
-			return;
-		}
-		if (agentBalance.balance < payment.amount) {
-			payment.status = 8;
-			await task.SaveTaskData();
-			return;
-		}
-		let checkPayment = await this.CheckPaymentRequisites(task.Person, payment);
-		if (checkPayment.status != 0) {
-			payment.status = 4;
-			await task.SaveTaskData();
-			return;
-		}
-		let offlinePayment = await this.#AddOfflinePayment(task.Person, payment);
-		if (offlinePayment.status != 0) {
-			payment.status = 5;
-			await task.SaveTaskData();
-			return;
-		}
-		payment.status = 6;
-		await task.SaveTaskData();
-		// console.log("provider=> ", provider);
-		// console.log("lastPayment=> ", lastPayment);
-		// console.log("agentBalance=> ", agentBalance);
-		// console.log("checkPayment=> ", checkPayment);
+
+
+
+
+
+
+		// this.#isBusy = 1;
+		// console.log("отправляем платеж на сумму ", payment.amount, " для номера ", payment.num, " для задачи ", task.Id);
+		// payment.status = 1;
+		// let provider = await this.GetProviderByPhone(task.Person, payment);
+		// if (provider.status != 0) {
+		// 	payment.status = 7;
+		// 	await task.SaveTaskData();
+		// 	this.#isBusy = 0;
+		// 	return;
+		// }
+		// payment.service = provider.id;
+		// let lastPayment = await this.GetLastId(task.Person);
+		// if (lastPayment.status != 0) {
+		// 	payment.status = 3;
+		// 	await task.SaveTaskData();
+		// 	this.#isBusy = 0;
+		// 	return;
+		// }
+		// payment.id = lastPayment.id + 1;
+		// let agentBalance = await this.GetBalance(task.Person);
+		// if (lastPayment.status != 0) {
+		// 	payment.status = 10;
+		// 	await task.SaveTaskData();
+		// 	this.#isBusy = 0;
+		// 	return;
+		// }
+		// if (agentBalance.balance < payment.amount) {
+		// 	payment.status = 8;
+		// 	await task.SaveTaskData();
+		// 	this.#isBusy = 0;
+		// 	return;
+		// }
+		// let checkPayment = await this.CheckPaymentRequisites(task.Person, payment);
+		// if (checkPayment.status != 0) {
+		// 	if (checkPayment.status == 16) payment.status = 16; // Превышен суточный лимит на сумму операций
+		// 	else payment.status = 4;
+		// 	await task.SaveTaskData();
+		// 	this.#isBusy = 0;
+		// 	return;
+		// }
+		// let offlinePayment = await this.#AddOfflinePayment(task.Person, payment);
+		// if (offlinePayment.status != 0) {
+		// 	payment.status = 5;
+		// 	await task.SaveTaskData();
+		// 	this.#isBusy = 0;
+		// 	return;
+		// }
+		// payment.status = 6;
+		// await task.SaveTaskData();
+		// // console.log("provider=> ", provider);
+		// // console.log("lastPayment=> ", lastPayment);
+		// // console.log("agentBalance=> ", agentBalance);
+		// // console.log("checkPayment=> ", checkPayment);
+		// this.#isBusy = 0;
 	}
 
 }
@@ -565,7 +638,7 @@ class KiwiPerson {
 class PaymentsTask {
 	#id;#terminal;#person;#status;#connector;#toolbox;#creationDate;#clearMethod;#tick;
 	#minInterval;#maxInterval;#list;#data;#comment;#delayed = 0;#dateStart;
-	#cnt = 0;#ignoreStatuses = [0,1,4,5,6,7,8,9,10];
+	#cnt = 0;#ignoreStatuses = [0,1,4,5,6,7,8,9,10,16,202];
 	#paymentStatusCheck = [];
 	constructor(row, connector, toolbox, terminal, clearMethod) {
 		this.#id = row.id;
@@ -590,6 +663,9 @@ class PaymentsTask {
 			dateStart: this.#dateStart,
 			comment: this.#comment,
 			sum: this.#list.reduce((total, item)=> total + parseInt(item.amount), 0),
+			successSum: this.#list.reduce((total, item)=> item.status == 0 && (total += parseInt(item.amount)) || (total += 0), 0),
+			cnt: this.#list.length,
+			successCnt: this.#list.reduce((total, item)=> item.status == 0 && (total += 1) || (total += 0), 0),
 			list: this.#list,
 			status: this.#status,
 		}
@@ -605,7 +681,7 @@ class PaymentsTask {
 		this.#list = this.#data.list;
 		if (this.#status == 1) {
 			this.#SetDates();
-			this.#tick = setInterval(async ()=> { await this.#CheckPayment() }, 15000);
+			this.#tick = setInterval(async ()=> { await this.#CheckPayment() }, 10000);
 		}
 	}
 	#SetDates() {
@@ -633,6 +709,26 @@ class PaymentsTask {
 		}
 	}
 	async #CheckPayment() {
+		// проверить статусы
+		for (let payment of this.#list) {
+			if (payment.status == 6) {
+				console.log("Есть платеж на проверку статуса ", payment.num);
+				let check = await this.#terminal.CheckPaymentStatus(this.#person, payment);
+				if (check.status == 0) {
+					if (check.paymentStatus == 2) {
+						payment.status = 0;
+						console.log("платеж успешен");
+						this.#paymentStatusCheck = this.#paymentStatusCheck.filter(item=> item.hash != payment.hash);
+					} else if (check.paymentStatus == 0) {
+						payment.status = 5;
+						this.#paymentStatusCheck = this.#paymentStatusCheck.filter(item=> item.hash != payment.hash);
+					} else if (check.paymentStatus == 3 || check.paymentStatus == 1) this.#paymentStatusCheck.push(payment);
+				} else payment.status = 5;
+				await this.SaveTaskData();
+			}
+		}
+
+
 		let payment = this.#list.find(item=> this.#ignoreStatuses.indexOf(item.status) == -1);
 		if (!payment) {
 			if (this.#paymentStatusCheck.length == 0) await this.#Complete();
@@ -642,26 +738,10 @@ class PaymentsTask {
 			let currentDate = moment();
 			let paymentDate = moment(payment.date).format("YYYY-MM-DDTHH:mm:ss");
 			if (currentDate.isAfter(paymentDate) && start) {
-				payment.status = 0;
-				await this.#terminal.SendPayment(payment, this);
-			}
-		}
-
-		// проверить статусы
-		for (let payment of this.#list) {
-			if (payment.status == 6) {
-				console.log("Есть платеж на проверку статуса ", payment.num);
-				let check = await this.#terminal.CheckPaymentStatus(this.#person, payment);
-				if (check.status == 0) {
-					if (check.paymentStatus == 2) {
-						payment.status = 0;
-						this.#paymentStatusCheck = this.#paymentStatusCheck.filter(item=> item.hash != payment.hash);
-					} else if (check.paymentStatus == 0) {
-						payment.status = 5;
-						this.#paymentStatusCheck = this.#paymentStatusCheck.filter(item=> item.hash != payment.hash);
-					} else if (check.paymentStatus == 3 || check.paymentStatus == 1) this.#paymentStatusCheck.push(payment);
-				} else payment.status = 5;
-				await this.SaveTaskData();
+				if (this.#terminal.IsBusy == 0) {
+					payment.status = 0;
+					await this.#terminal.SendPayment(payment, this);
+				}
 			}
 		}
 	}
