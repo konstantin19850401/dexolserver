@@ -16,8 +16,9 @@ class Api {
 	#GetPaymentsList(packet, users, application) {
 		let paymentsList = application.PaymentsList;
 		let list = [];
+		let ignore = ["list", "successCnt"];
 		for (let item of paymentsList) {
-			list.push(Object.fromEntries(Object.entries(item).filter(([key]) => key != "list")));
+			list.push(Object.fromEntries(Object.entries(item).filter(([key]) => ignore.indexOf(key) == -1)));
 		}
 		//packet.data.filter = [{name: "id", value: 12}, {name: "terminal", value: "10746127"}];
 		if (packet.data.filter && Array.isArray(packet.data.filter)) {
