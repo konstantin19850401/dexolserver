@@ -282,12 +282,14 @@ class KiwiTerminal {
 					},
 					body: xml
 				}
+				// console.log("xml=> ", xml);
 				request.post(data, async (err, response, body)=> {
 					if (err) {
 						console.log("err=> ", err);
 						resolve({status: 2});
 					} else {
 						let json = await this.#toolbox.XmlToString(body);
+						// console.log(body);
 						if (json?.response?.$?.result == 0) {
 							if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.$?.result == 0) {
 								if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.status == 3) {
@@ -295,6 +297,8 @@ class KiwiTerminal {
 								} else if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.status == 0) {
 									if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.result == 16) {
 										resolve({status: 16});
+									} else if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.result == 202) {
+										resolve({status: 202});
 									} else {
 										resolve({status: 3});
 									}
@@ -449,6 +453,7 @@ class KiwiTerminal {
 	}
 	async SendPayment(payment, task) {
 		if (this.#isBusy == 0) {
+			console.log("отправляем платеж на сумму ", payment.amount, " для номера ", payment.num, " для задачи ", task.Id);
 			this.#isBusy = 1;
 			let methods = [
 				{method: async (...args)=> { return await this.GetProviderByPhone(...args); },     name: "GetProviderByPhone", errStatus: 7},
@@ -463,6 +468,7 @@ class KiwiTerminal {
 				if (result.status != 0) {
 					if (item.name == "CheckPaymentRequisites") {
 						if (result.status == 16) payment.status = 16;
+						else if (result.status == 202) payment.status = 202;
 						else payment.status = 4;
 					} else {
 						payment.status = item.errStatus;
@@ -471,7 +477,7 @@ class KiwiTerminal {
 					this.#isBusy = 0;
 					return;
 				}
-
+				if (item.name == "GetProviderByPhone") payment.service = result.id;
 				if (item.name == "GetLastId") payment.id = result.id + 1;
 				if (item.name == "GetBalance" && result.balance < payment.amount) {
 					payment.status = 8;
@@ -632,7 +638,7 @@ class KiwiPerson {
 class PaymentsTask {
 	#id;#terminal;#person;#status;#connector;#toolbox;#creationDate;#clearMethod;#tick;
 	#minInterval;#maxInterval;#list;#data;#comment;#delayed = 0;#dateStart;
-	#cnt = 0;#ignoreStatuses = [0,1,4,5,6,7,8,9,10,16];
+	#cnt = 0;#ignoreStatuses = [0,1,4,5,6,7,8,9,10,16,202];
 	#paymentStatusCheck = [];
 	constructor(row, connector, toolbox, terminal, clearMethod) {
 		this.#id = row.id;
