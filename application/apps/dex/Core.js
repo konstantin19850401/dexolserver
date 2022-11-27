@@ -12,6 +12,7 @@ class Core {
 		this.#Init();
 	}
 	get Name() { return this.#name; }
+	get List() { return this.#list; }
 	async #Init() {
 		let rows = await this.#connector.Request("dexol", `
 			SELECT * FROM dicts_data
@@ -21,10 +22,7 @@ class Core {
 			this.#list.push(new Base(row, this.#connector, this.#core));
 		}
 	}
-	
-	async GetBaseRecord() {
 
-	}
 	Check(packet, users, response) {
 		let allowed = [
 			{name: "api",           method: (...args) => { this.#api.Check(...args) } }
@@ -80,11 +78,12 @@ class Base {
 		await this.#LoadJournals();
 		// setTimeout( async ()=> await this.GetPeriod({delStatus: 0, baseName: "mega", jtype: "archive", search: "федор", creationMethod: 1, status: 4, store: 9999, start: "20090601", end: "20090610" }), 5000);
 		//setTimeout( async ()=> await this.GetJRecord({jtype: "archive", id: 500}), 5000);
-		setTimeout( async ()=> { 
-			let res = await this.DeleteRecord({jtype: "archive", id: 500});
-			if (res) console.log("зарись удалена");
-			if (!res) console.log("зарись не удалена");
-		}, 5000);
+		// setTimeout( async ()=> { 
+		// 	let res = await this.DeleteJRecord({jtype: "archive", id: 500});
+		// 	if (res) console.log("запись удалена");
+		// 	if (!res) console.log("запись не удалена");
+		// }, 5000);
+		setTimeout( async ()=> await this.EditJRecord({jtype: "journal", id: 500}), 5000);
 	}
 	async #LoadJournals() {
 		let journals = [{id: 1, name: "journal", storage: this.#journal}, {id: 2, name: "archive", storage: this.#archive}];
@@ -108,7 +107,6 @@ class Base {
 		}
 		return;
 	}
-
 	async GetPeriod(data) {
 		let jtypes = ["journal", "archive"];
 		if (!data.jtype || jtypes.indexOf(data.jtype) == -1) return [];
@@ -140,14 +138,22 @@ class Base {
 		}
 		return jrecord;
 	}
-	async DeleteRecord(data) {
+	async DeleteJRecord(data) {
 		let jtypes = ["journal", "archive"];
 		if (jtypes.indexOf(data.jtype) != -1) {
 			let journal = data.jtype == "journal" ? this.#journal : this.#archive;
 			let jrecord = journal.find(item=> item.Id == data.id);
-			return jrecord && await jrecord.DeleteRecord() || false;
+			return jrecord && await jrecord.Delete() || false;
 		}
 		return false;
+	}
+	async AddNewJRecord(data) {
+		if (data.jtype != "journal") return false;
+	}
+	async EditJRecord(data) {
+		if (data.jtype != "journal") return false;
+		let jrecord = await this.GetJRecord({id: data.id, jtype: "journal"});
+		jrecord && await jrecord.Update({id: 500, data: "", status: 1, signature: ""});
 	}
 }
 
@@ -186,9 +192,23 @@ class JRecord {
 		this.#document = data?.document || {};
 		this.#logs = data?.logs || {};
 	}
-	async DeleteRecord() {
+	async Delete() {
 		let result = await this.#connector.Request("dexol", `
 			UPDATE \`${this.#base.BaseName}\` SET del = '1' WHERE id = '${this.#id}'
+		`);
+		return result.changedRows == 1 && (this.#delStatus = 1) || false;
+	}
+	async Update(fields) {
+		if (!fields.id) return false;
+		let allowed = ["jtype", "store", "jdocdate", "date", "data", "status"];
+		let allowedFields = Object.fromEntries(Object.entries(fields).filter(([key]) => allowed.indexOf(key) != -1));
+		if (allowedFields.data) allowedFields.data = JSON.stringify(allowedFields.data);
+		let updates = [];
+		for (let key in allowedFields) updates.push(`${key} = '${allowedFields[key]}'`);
+		let result = await this.#connector.Request("dexol", `
+			UPDATE \`${this.#base.BaseName}\` 
+			SET ${updates.join(",")}
+			WHERE id = '${fields.id}'
 		`);
 		return result.changedRows == 1 || false;
 	}
