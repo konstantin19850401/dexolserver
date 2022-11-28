@@ -304,7 +304,7 @@ class KiwiTerminal {
 									} else {
 										resolve({status: 3});
 									}
-									// this.#PrintMessage(body);
+									this.#PrintMessage(body);
 
 								} else {
 									this.#PrintMessage(body)
