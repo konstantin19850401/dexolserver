@@ -300,7 +300,7 @@ class KiwiTerminal {
 									} else if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.result == 202) {
 										resolve({status: 202});
 									} else if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.result == 215) {
-										resolve({status: 215});
+										resolve({status: 215}); 
 									} else {
 										resolve({status: 3});
 									}
