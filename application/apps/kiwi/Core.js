@@ -299,6 +299,8 @@ class KiwiTerminal {
 										resolve({status: 16});
 									} else if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.result == 202) {
 										resolve({status: 202});
+									} else if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.result == 215) {
+										resolve({status: 215});
 									} else {
 										resolve({status: 3});
 									}
@@ -469,7 +471,10 @@ class KiwiTerminal {
 					if (item.name == "CheckPaymentRequisites") {
 						if (result.status == 16) payment.status = 16;
 						else if (result.status == 202) payment.status = 202;
-						else payment.status = 4;
+						else if (result.status == 215) { 
+							console.log("платеж надо провести попозже");
+							payment.status = 215;
+						} else payment.status = 4;
 					} else {
 						payment.status = item.errStatus;
 					}
