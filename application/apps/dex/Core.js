@@ -153,7 +153,11 @@ class Base {
 	async EditJRecord(data) {
 		if (data.jtype != "journal") return false;
 		let jrecord = await this.GetJRecord({id: data.id, jtype: "journal"});
-		jrecord && await jrecord.Update({id: 500, data: "", status: 1, signature: ""});
+		return jrecord && await jrecord.Update({id: 500, data: "", status: 1, signature: ""});
+	}
+	async ValidateJRecordDocument(document) {
+		let errs = [];
+		// for (let )
 	}
 }
 
@@ -188,7 +192,7 @@ class JRecord {
 	// get StoreRecord() { return this.#storeRecord; }// ссылка на документ-распределения на складе
 
 	async #Init(row) {
-		let data = JSON.parse(row.data.replace(/\\/gi, `/`));
+		let data = row.data != "" ? JSON.parse(row.data.replace(/\\/gi, `/`)) : {};
 		this.#document = data?.document || {};
 		this.#logs = data?.logs || {};
 	}
@@ -199,10 +203,19 @@ class JRecord {
 		return result.changedRows == 1 && (this.#delStatus = 1) || false;
 	}
 	async Update(fields) {
+		let errs = [];
 		if (!fields.id) return false;
 		let allowed = ["jtype", "store", "jdocdate", "date", "data", "status"];
 		let allowedFields = Object.fromEntries(Object.entries(fields).filter(([key]) => allowed.indexOf(key) != -1));
-		if (allowedFields.data) allowedFields.data = JSON.stringify(allowedFields.data);
+
+		if (allowedFields?.data) {
+			errs = errs.concat(await this.base.ValidateJRecordDocument(allowedFields.data));
+
+			for (let key in allowedFields.data) {
+				allowedFields.data = this.#toolbox.HtmlSpecialChars(allowedFields.data[key]);
+			}
+			allowedFields.data = JSON.stringify(allowedFields.data);
+		}
 		let updates = [];
 		for (let key in allowedFields) updates.push(`${key} = '${allowedFields[key]}'`);
 		let result = await this.#connector.Request("dexol", `
