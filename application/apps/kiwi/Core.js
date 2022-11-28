@@ -738,12 +738,12 @@ class PaymentsTask {
 		if (!payment) {
 			if (this.#paymentStatusCheck.length == 0) await this.#Complete();
 		} else {
-			let start = true;
-			let moment = this.#toolbox.Moment();
-			let currentDate = moment();
-			let paymentDate = moment(payment.date).format("YYYY-MM-DDTHH:mm:ss");
-			if (currentDate.isAfter(paymentDate) && start) {
-				if (this.#terminal.IsBusy == 0) {
+			if (this.#terminal.IsBusy == 0) {
+				let start = true;
+				let moment = this.#toolbox.Moment();
+				let currentDate = moment();
+				let paymentDate = moment(payment.date).format("YYYY-MM-DDTHH:mm:ss");
+				if (currentDate.isAfter(paymentDate) && start) {
 					payment.status = 0;
 					await this.#terminal.SendPayment(payment, this);
 				}
