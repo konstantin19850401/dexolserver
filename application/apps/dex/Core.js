@@ -68,6 +68,7 @@ class Base {
 	get Operator() { return this.#operator; }
 	get Journal() { return this.#journal; }
 	get Archive() { return this.#archive; }
+	get Dictionaries() { return this.#core.Dicts; }
 	async #Init(row) {
 		let data = JSON.parse(row.data);
 		this.#name = data?.uid || "";
@@ -83,7 +84,8 @@ class Base {
 		// 	if (res) console.log("запись удалена");
 		// 	if (!res) console.log("запись не удалена");
 		// }, 5000);
-		setTimeout( async ()=> await this.EditJRecord({jtype: "journal", id: 500}), 5000);
+		// setTimeout( async ()=> await this.EditJRecord({jtype: "journal", id: 500}), 5000);
+		setTimeout( async ()=> await JRecord.Create({status: null, store: 1111111}, this), 5000);
 	}
 	async #LoadJournals() {
 		let journals = [{id: 1, name: "journal", storage: this.#journal}, {id: 2, name: "archive", storage: this.#archive}];
@@ -202,6 +204,20 @@ class JRecord {
 		`);
 		return result.changedRows == 1 && (this.#delStatus = 1) || false;
 	}
+	static async Create(row, base) {
+		let errs = [];
+		let dict = base.Dictionaries.List.find(item=> item.Name == "dexDocumentStatuses");
+		!row?.status && errs.push("Не указан статус.") ||
+		!dict.List.find(item=> item.id == row.status) && errs.push(`Значение поля "Статус" не содержится в справочнике.`);
+
+		// dict = base.Dictionaries.List.find(item=> item.Name == "stores");
+		// !row.store && errs.push("Не указано отделение.") ||
+		// !dict.Data.find(item=> item.uid == row.store) && errs.push(`Значение поля "Отделение" не содержится в справочнике.`);
+
+
+		console.log("errs=>", errs);
+
+	}
 	async Update(fields) {
 		let errs = [];
 		if (!fields.id) return false;
@@ -225,4 +241,14 @@ class JRecord {
 		`);
 		return result.changedRows == 1 || false;
 	}
+}
+
+
+let testJRecord = {
+	document: {
+		"FirstName":"Мариям",
+		"SecondName":"Якубовна",
+		"LastName":"Ольмезова"
+	},
+	log: {}
 }
