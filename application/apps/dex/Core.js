@@ -85,7 +85,12 @@ class Base {
 		// 	if (!res) console.log("запись не удалена");
 		// }, 5000);
 		// setTimeout( async ()=> await this.EditJRecord({jtype: "journal", id: 500}), 5000);
-		setTimeout( async ()=> await JRecord.Create({status: null, store: 1111111}, this), 5000);
+		setTimeout( async ()=> await JRecord.Create({status: 1, store: 1740, type: 1, jtype: 1, document: {
+			FizDocType: 1,
+			FizDocSeries: 8307,
+			FizDocNumber: 866468,
+			FizDocOrg: "ОУФМС РФ по КБР в Чегемском р-не"
+		}}, this), 5000);
 	}
 	async #LoadJournals() {
 		let journals = [{id: 1, name: "journal", storage: this.#journal}, {id: 2, name: "archive", storage: this.#archive}];
@@ -206,14 +211,40 @@ class JRecord {
 	}
 	static async Create(row, base) {
 		let errs = [];
+
+
+		// проверка основных полей
 		let dict = base.Dictionaries.List.find(item=> item.Name == "dexDocumentStatuses");
 		!row?.status && errs.push("Не указан статус.") ||
-		!dict.List.find(item=> item.id == row.status) && errs.push(`Значение поля "Статус" не содержится в справочнике.`);
+		!dict.Data.find(item=> parseInt(item.uid) === parseInt(row.status) && parseInt(item.status) === 1) && errs.push(`Значение поля "Статус" не содержится в справочнике.`);
 
-		// dict = base.Dictionaries.List.find(item=> item.Name == "stores");
-		// !row.store && errs.push("Не указано отделение.") ||
-		// !dict.Data.find(item=> item.uid == row.store) && errs.push(`Значение поля "Отделение" не содержится в справочнике.`);
+		dict = base.Dictionaries.List.find(item=> item.Name == "stores");
+		!row.store && errs.push("Не указано отделение.") ||
+		!dict.Data.find(item=> parseInt(item.dexUid) === parseInt(row.store) && parseInt(item.status) === 1) && errs.push(`Значение поля "Отделение" не содержится в справочнике.`);
 
+		dict = base.Dictionaries.List.find(item=> item.Name == "dexCreationDocTypes");
+		!row.type && errs.push("Не указано каким образом создан документ.") ||
+		!dict.Data.find(item=> parseInt(item.id) === parseInt(row.type) && parseInt(item.status) === 1) && errs.push(`Значение поля "Метод создания" не содержится в справочнике.`);
+
+		dict = base.Dictionaries.List.find(item=> item.Name == "dexJTypes");
+		!row.jtype && errs.push("Не указан тип журнала.") ||
+		row?.jtype == 2 && errs.push("Невозможно создать новый документ в архиве") ||
+		!dict.Data.find(item=> parseInt(item.id) === parseInt(row.jtype) && parseInt(item.status) === 1) && errs.push(`Значение поля "Тип журнала" не содержится в справочнике.`);
+
+		// проверка полей документа
+		dict = base.Dictionaries.List.find(item=> item.Name == "identityDocuments");
+		!row?.document?.FizDocType && errs.push("Не указан тип документа удостоверяющего личность.")
+		!dict.Data.find(item=> parseInt(item.id) === parseInt(row.document.FizDocType) && parseInt(item.status) === 1) && errs.push(`Значение поля "Тип документа удостоверяющего личность" не содержится в справочнике.`) ||
+
+
+		!row?.document?.FizDocSeries && errs.push("Не указана серия документа удостоверяющего личность.") ||
+		!row?.document?.FizDocNumber && errs.push("Не указан номер документа удостоверяющего личность.") ||
+
+
+
+
+
+		// console.log("==> ", dict.Data);
 
 		console.log("errs=>", errs);
 

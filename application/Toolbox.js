@@ -91,6 +91,10 @@ class Toolbox {
 		}
 		return array;
 	}
+	static async CheckPassport( data, connector ) {
+		!data?.FizDocSeries && errs.push("Не указана серия документа удостоверяющего личность.") ||
+		!data?.FizDocNumber && errs.push("Не указан номер документа удостоверяющего личность.") ||
+	}
 }
 
 module.exports = Toolbox;

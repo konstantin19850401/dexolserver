@@ -372,7 +372,7 @@ class KiwiTerminal {
 			}
 		});
 	}
-	async CheckPaymentStatus(personUid, payment) {
+	async #GetPaymentStatus(personUid, payment) {
 		return new Promise((resolve, reject)=> {
 			let person = this.#persons.find(item=> item.Uid == personUid);
 			if (person) {
@@ -452,6 +452,15 @@ class KiwiTerminal {
 				resolve({status: 1});
 			}
 		});
+	}
+
+	async CheckPaymentStatus(personUid, payment) {
+		if (this.#isBusy == 0) {
+			this.#isBusy = 1;
+			let result = await this.#GetPaymentStatus(personUid, payment);
+			this.#isBusy = 0;
+			return result;
+		}
 	}
 	async SendPayment(payment, task) {
 		if (this.#isBusy == 0) {
@@ -686,7 +695,7 @@ class PaymentsTask {
 		this.#list = this.#data.list;
 		if (this.#status == 1) {
 			this.#SetDates();
-			this.#tick = setInterval(async ()=> { await this.#CheckPayment() }, 10000);
+			this.#tick = setInterval(async ()=> { await this.#CheckPayment() }, 20000);
 		}
 	}
 	#SetDates() {
@@ -717,19 +726,23 @@ class PaymentsTask {
 		// проверить статусы
 		for (let payment of this.#list) {
 			if (payment.status == 6) {
-				console.log("Есть платеж на проверку статуса ", payment.num);
-				let check = await this.#terminal.CheckPaymentStatus(this.#person, payment);
-				if (check.status == 0) {
-					if (check.paymentStatus == 2) {
-						payment.status = 0;
-						console.log("платеж успешен");
-						this.#paymentStatusCheck = this.#paymentStatusCheck.filter(item=> item.hash != payment.hash);
-					} else if (check.paymentStatus == 0) {
-						payment.status = 5;
-						this.#paymentStatusCheck = this.#paymentStatusCheck.filter(item=> item.hash != payment.hash);
-					} else if (check.paymentStatus == 3 || check.paymentStatus == 1) this.#paymentStatusCheck.push(payment);
-				} else payment.status = 5;
-				await this.SaveTaskData();
+				if (this.#terminal.IsBusy == 0) {
+					console.log("Есть платеж на проверку статуса ", payment.num);
+					let check = await this.#terminal.CheckPaymentStatus(this.#person, payment);
+					if (check.status == 0) {
+						if (check.paymentStatus == 2) {
+							payment.status = 0;
+							console.log("платеж успешен");
+							this.#paymentStatusCheck = this.#paymentStatusCheck.filter(item=> item.hash != payment.hash);
+						} else if (check.paymentStatus == 0) {
+							payment.status = 5;
+							this.#paymentStatusCheck = this.#paymentStatusCheck.filter(item=> item.hash != payment.hash);
+						} else if (check.paymentStatus == 3 || check.paymentStatus == 1) this.#paymentStatusCheck.push(payment);
+					} else payment.status = 5;
+					await this.SaveTaskData();
+				} else {
+					console.log("Есть платеж на проверку статуса. Но терминал пока занят ", payment.num);
+				}
 			}
 		}
 
