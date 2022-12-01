@@ -83,6 +83,7 @@ class Toolbox {
 
 		return moment;
 	}
+	// перемешать массив случайным образом
 	static ShuffleArray(array) {
 		if (!Array.isArray(array)) return;
 		for (let i = array.length - 1; i > 0; i--) {
@@ -91,9 +92,59 @@ class Toolbox {
 		}
 		return array;
 	}
-	static async CheckPassport( data, connector ) {
-		!data?.FizDocSeries && errs.push("Не указана серия документа удостоверяющего личность.") ||
-		!data?.FizDocNumber && errs.push("Не указан номер документа удостоверяющего личность.") ||
+	// проверить паспорт
+	static async CheckPassport( data, connector, person ) {
+		let errs = [];
+		let rxDate = /^(\d{1,2}).(\d{1,2}).(\d{4})$/;
+		let moment = Toolbox.Moment();
+		!data?.FizDocSeries && errs.push("Не указана серия документа удостоверяющего личность.");
+		!data?.FizDocNumber && errs.push("Не указан номер документа удостоверяющего личность.");
+		!data?.FizDocOrg && errs.push("Не указана организация, выдавшая документ.");
+		!data?.FizDocType && errs.push("Не указан тип удостоверения личности.");
+		(!data?.FizDocDate || !rxDate.test(data.FizDocDate) || !moment(data.FizDocDate, "DD.MM.YYYY").isValid()) && errs.push("Не указана дата выдачи документа.");
+		(!data?.DocDate || !rxDate.test(data.DocDate) || !moment(data.DocDate, "DD.MM.YYYY").isValid()) && errs.push("Не указана дата договора.");
+		if (errs.length == 0 && data.FizDocType == 1) {
+			let rxSeries = /^[0-9]{4}$/;
+			let rxNumber = /^[0-9]{6}$/;
+			let rxCode = /^\d{3}-\d{3}$/;
+			!rxSeries.test(data.FizDocSeries) && errs.push(`Для типа документа "Паспорт РФ" серия должна состоять из 4 цифр без пробелов.`);
+			!rxNumber.test(data.FizDocNumber) && errs.push(`Для типа документа "Паспорт РФ" номер должен состоять из 6 цифр без пробелов.`);
+			(!data?.FizDocOrgCode || !rxCode.test(data.FizDocOrgCode)) && errs.push("Не указан код подразделения или он имеет ошибочный формат.");
+			if (errs.length == 0) {
+				let rows = await connector.Request("dexol", `SELECT COUNT(*) as total FROM \`expired_passports\` WHERE value='${data.FizDocSeries}${data.FizDocNumber}'`);
+				if (rows[0].total > 0) errs.push(`Паспорт с серией ${data.FizDocSeries} и номером ${data.FizDocNumber} находится в списках недействительных паспортов.`);
+			}
+		}
+		if (errs.length == 0 && person) {
+			(!person?.Birth || !rxDate.test(person.Birth) || !moment(person.Birth, "DD.MM.YYYY").isValid()) && errs.push("Не указана дата рождения.");
+			if (errs.length == 0) {
+				let datesIssue = [14,20,45];
+				moment(person.Birth, "DD.MM.YYYY").isAfter(moment(data.DocDate, "DD.MM.YYYY")) && errs.push("Дата рождения не может быть больше даты договора.") ||
+				moment(data.FizDocDate, "DD.MM.YYYY").isAfter(moment(data.DocDate, "DD.MM.YYYY")) && errs.push("Дата выдачи документа не может быть больше даты договора.") ||
+				moment(person.Birth, "DD.MM.YYYY").isAfter(moment(data.FizDocDate, "DD.MM.YYYY")) && errs.push("Дата рождения не может быть больше даты выдачи документа.") ||
+				moment(data.DocDate, "DD.MM.YYYY").diff(moment(person.Birth, "DD.MM.YYYY"), "year") <= 18 && errs.push("Абонент не может быть младше 18 лет.");
+				for (let dateIssue of datesIssue) {
+					let r = moment(data.FizDocDate, "DD.MM.YYYY").diff(moment(data.Birth, "DD.MM.YYYY"), "year") >= dateIssue &&
+							moment(data.DocDate, "DD.MM.YYYY").diff(moment(person.Birth, "DD.MM.YYYY"), "year") >= dateIssue ||
+							moment(data.FizDocDate, "DD.MM.YYYY").diff(moment(data.Birth, "DD.MM.YYYY"), "year") < dateIssue &&
+							moment(data.DocDate, "DD.MM.YYYY").diff(moment(person.Birth, "DD.MM.YYYY"), "year") < dateIssue;
+					if (!r) {
+						let fromBirthtoDocDate = Math.abs(moment(data.DocDate, "DD.MM.YYYY").diff(moment(person.Birth, "DD.MM.YYYY"), "days"));
+						let fromBirthtoFizDocDate = Math.abs(moment(data.FizDocDate, "DD.MM.YYYY").diff(moment(person.Birth, "DD.MM.YYYY"), "days"));
+						Math.abs(fromBirthtoDocDate - fromBirthtoFizDocDate) > 27 && errs.push(`Паспорт просрочен на ${ Math.abs(fromBirthtoDocDate - fromBirthtoFizDocDate) } дней.`);
+						break;
+					}
+				}
+			}
+			if (errs.length == 0) {
+				let permissiblePeriod = 4;
+				let langPeriod = permissiblePeriod == 1 ? "года" : "лет";
+				let chDate = parseInt(moment(data.FizDocDate, "DD.MM.YYYY").year().toString().substring(2,4));
+                let chFds = parseInt(data.FizDocSeries.toString().substring(2,4));
+                Math.abs(chDate - chFds) > permissiblePeriod && errs.push(`Ошибочные данные паспорта. Разница между серией и годом выдачи более ${permissiblePeriod} ${langPeriod}.`);
+			}
+		}
+		return errs;
 	}
 }
 

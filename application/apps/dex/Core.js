@@ -69,6 +69,8 @@ class Base {
 	get Journal() { return this.#journal; }
 	get Archive() { return this.#archive; }
 	get Dictionaries() { return this.#core.Dicts; }
+	get Toolbox() { return this.#toolbox; }
+	get Connector() { return this.#connector; }
 	async #Init(row) {
 		let data = JSON.parse(row.data);
 		this.#name = data?.uid || "";
@@ -87,9 +89,13 @@ class Base {
 		// setTimeout( async ()=> await this.EditJRecord({jtype: "journal", id: 500}), 5000);
 		setTimeout( async ()=> await JRecord.Create({status: 1, store: 1740, type: 1, jtype: 1, document: {
 			FizDocType: 1,
-			FizDocSeries: 8307,
+			FizDocSeries: 8300,
 			FizDocNumber: 866468,
-			FizDocOrg: "ОУФМС РФ по КБР в Чегемском р-не"
+			FizDocOrg: "ОУФМС РФ по КБР в Чегемском р-не",
+			FizDocOrgCode: "000-000",
+			Birth: "01.04.1985",
+			DocDate: "26.04.2005",
+			FizDocDate: "05.04.2005",
 		}}, this), 5000);
 	}
 	async #LoadJournals() {
@@ -234,11 +240,9 @@ class JRecord {
 		// проверка полей документа
 		dict = base.Dictionaries.List.find(item=> item.Name == "identityDocuments");
 		!row?.document?.FizDocType && errs.push("Не указан тип документа удостоверяющего личность.")
-		!dict.Data.find(item=> parseInt(item.id) === parseInt(row.document.FizDocType) && parseInt(item.status) === 1) && errs.push(`Значение поля "Тип документа удостоверяющего личность" не содержится в справочнике.`) ||
+		!dict.Data.find(item=> parseInt(item.id) === parseInt(row.document.FizDocType) && parseInt(item.status) === 1) && errs.push(`Значение поля "Тип документа удостоверяющего личность" не содержится в справочнике.`);
 
-
-		!row?.document?.FizDocSeries && errs.push("Не указана серия документа удостоверяющего личность.") ||
-		!row?.document?.FizDocNumber && errs.push("Не указан номер документа удостоверяющего личность.") ||
+		errs = errs.concat(await base.Toolbox.CheckPassport(row.document, base.Connector, {Birth: row.document.Birth}));
 
 
 
