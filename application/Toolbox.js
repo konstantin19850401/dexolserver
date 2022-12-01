@@ -135,8 +135,6 @@ class Toolbox {
 						break;
 					}
 				}
-			}
-			if (errs.length == 0) {
 				let permissiblePeriod = 4;
 				let langPeriod = permissiblePeriod == 1 ? "года" : "лет";
 				let chDate = parseInt(moment(data.FizDocDate, "DD.MM.YYYY").year().toString().substring(2,4));

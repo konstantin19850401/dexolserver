@@ -89,13 +89,16 @@ class Base {
 		// setTimeout( async ()=> await this.EditJRecord({jtype: "journal", id: 500}), 5000);
 		setTimeout( async ()=> await JRecord.Create({status: 1, store: 1740, type: 1, jtype: 1, document: {
 			FizDocType: 1,
-			FizDocSeries: 8300,
+			FizDocSeries: 8305,
 			FizDocNumber: 866468,
 			FizDocOrg: "ОУФМС РФ по КБР в Чегемском р-не",
 			FizDocOrgCode: "000-000",
 			Birth: "01.04.1985",
 			DocDate: "26.04.2005",
 			FizDocDate: "05.04.2005",
+			FirstName: "Мыы",
+			SecondName: "Яыыы",
+			LastName: "Оввв"
 		}}, this), 5000);
 	}
 	async #LoadJournals() {
@@ -218,34 +221,34 @@ class JRecord {
 	static async Create(row, base) {
 		let errs = [];
 
-
 		// проверка основных полей
 		let dict = base.Dictionaries.List.find(item=> item.Name == "dexDocumentStatuses");
 		!row?.status && errs.push("Не указан статус.") ||
-		!dict.Data.find(item=> parseInt(item.uid) === parseInt(row.status) && parseInt(item.status) === 1) && errs.push(`Значение поля "Статус" не содержится в справочнике.`);
+		!dict.Data.find(item=> parseInt(item.uid) === parseInt(row.status) && parseInt(item.status) === 1) && errs.push(`Поле "Статус" не содержится в справочнике.`);
 
 		dict = base.Dictionaries.List.find(item=> item.Name == "stores");
 		!row.store && errs.push("Не указано отделение.") ||
-		!dict.Data.find(item=> parseInt(item.dexUid) === parseInt(row.store) && parseInt(item.status) === 1) && errs.push(`Значение поля "Отделение" не содержится в справочнике.`);
+		!dict.Data.find(item=> parseInt(item.dexUid) === parseInt(row.store) && parseInt(item.status) === 1) && errs.push(`Поле "Отделение" не содержится в справочнике.`);
 
 		dict = base.Dictionaries.List.find(item=> item.Name == "dexCreationDocTypes");
 		!row.type && errs.push("Не указано каким образом создан документ.") ||
-		!dict.Data.find(item=> parseInt(item.id) === parseInt(row.type) && parseInt(item.status) === 1) && errs.push(`Значение поля "Метод создания" не содержится в справочнике.`);
+		!dict.Data.find(item=> parseInt(item.id) === parseInt(row.type) && parseInt(item.status) === 1) && errs.push(`Поле "Метод создания" не содержится в справочнике.`);
 
 		dict = base.Dictionaries.List.find(item=> item.Name == "dexJTypes");
 		!row.jtype && errs.push("Не указан тип журнала.") ||
 		row?.jtype == 2 && errs.push("Невозможно создать новый документ в архиве") ||
-		!dict.Data.find(item=> parseInt(item.id) === parseInt(row.jtype) && parseInt(item.status) === 1) && errs.push(`Значение поля "Тип журнала" не содержится в справочнике.`);
+		!dict.Data.find(item=> parseInt(item.id) === parseInt(row.jtype) && parseInt(item.status) === 1) && errs.push(`Поле "Тип журнала" не содержится в справочнике.`);
 
 		// проверка полей документа
 		dict = base.Dictionaries.List.find(item=> item.Name == "identityDocuments");
-		!row?.document?.FizDocType && errs.push("Не указан тип документа удостоверяющего личность.")
-		!dict.Data.find(item=> parseInt(item.id) === parseInt(row.document.FizDocType) && parseInt(item.status) === 1) && errs.push(`Значение поля "Тип документа удостоверяющего личность" не содержится в справочнике.`);
+		!row?.document?.FizDocType && errs.push("Не указан тип документа удостоверяющего личность.") ||
+		!dict.Data.find(item=> parseInt(item.id) === parseInt(row.document.FizDocType) && parseInt(item.status) === 1) && errs.push(`Поле "Тип документа" не содержится в справочнике.`) ||
+		(errs = errs.concat(await base.Toolbox.CheckPassport(row.document, base.Connector, {Birth: row.document.Birth})));
 
-		errs = errs.concat(await base.Toolbox.CheckPassport(row.document, base.Connector, {Birth: row.document.Birth}));
-
-
-
+		let rxName = /^(([a-zA-Z' -]{2,80})|([а-яА-ЯЁё' -]{2,80}))$/u;
+		!row?.document?.LastName && errs.push(`Поле "Фамилия" обязательно для заполнения.`) || !rxName.test(row.document.LastName) && errs.push(`Поле "Фамилия" не соответствует шаблону.`);
+		!row?.document?.FirstName && errs.push(`Поле "Имя" обязательно для заполнения.`) || !rxName.test(row.document.FirstName) && errs.push(`Поле "Имя" не соответствует шаблону.`);
+		row?.document?.SecondName && row.document.SecondName != "" && !rxName.test(row.document.SecondName) && errs.push(`Поле "Отчество" не соответствует шаблону.`);
 
 
 		// console.log("==> ", dict.Data);
