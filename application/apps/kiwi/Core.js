@@ -176,7 +176,7 @@ class KiwiTerminal {
 			WHERE terminal = '${this.#uid}'
 		`);
 		for (let row of rows) {
-			let task = this.#tasks.find(item=> item.Id == row.id);
+			let task = this.#tasks.find(item=> parseInt(item.Id) == parseInt(row.id));
 			if (!task) {
 				let paymentTask = new PaymentsTask(row, this.#connector, this.#toolbox, this, ()=> { this.#ClearCompletedTasks() } );
 				this.#paymentsList.push(paymentTask);
@@ -453,7 +453,6 @@ class KiwiTerminal {
 			}
 		});
 	}
-
 	async CheckPaymentStatus(personUid, payment) {
 		if (this.#isBusy == 0) {
 			this.#isBusy = 1;

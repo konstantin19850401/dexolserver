@@ -71,6 +71,7 @@ class Base {
 	get Dictionaries() { return this.#core.Dicts; }
 	get Toolbox() { return this.#toolbox; }
 	get Connector() { return this.#connector; }
+	get Core() { return this.#core; }
 	async #Init(row) {
 		let data = JSON.parse(row.data);
 		this.#name = data?.uid || "";
@@ -98,7 +99,15 @@ class Base {
 			FizDocDate: "05.04.2005",
 			FirstName: "Мыы",
 			SecondName: "Яыыы",
-			LastName: "Оввв"
+			LastName: "Оввв",
+			FizBirthPlace: "ывсывсыв",
+			Sex: "1",
+			Citizenship: "10",
+			AddrZip: "222249",
+			AddrCountry: "1",
+			AddrState: "4",
+			AddrCity: "sdc",
+			AddrPhone: "9999999999"
 		}}, this), 5000);
 	}
 	async #LoadJournals() {
@@ -226,10 +235,6 @@ class JRecord {
 		!row?.status && errs.push("Не указан статус.") ||
 		!dict.Data.find(item=> parseInt(item.uid) === parseInt(row.status) && parseInt(item.status) === 1) && errs.push(`Поле "Статус" не содержится в справочнике.`);
 
-		dict = base.Dictionaries.List.find(item=> item.Name == "stores");
-		!row.store && errs.push("Не указано отделение.") ||
-		!dict.Data.find(item=> parseInt(item.dexUid) === parseInt(row.store) && parseInt(item.status) === 1) && errs.push(`Поле "Отделение" не содержится в справочнике.`);
-
 		dict = base.Dictionaries.List.find(item=> item.Name == "dexCreationDocTypes");
 		!row.type && errs.push("Не указано каким образом создан документ.") ||
 		!dict.Data.find(item=> parseInt(item.id) === parseInt(row.type) && parseInt(item.status) === 1) && errs.push(`Поле "Метод создания" не содержится в справочнике.`);
@@ -239,19 +244,76 @@ class JRecord {
 		row?.jtype == 2 && errs.push("Невозможно создать новый документ в архиве") ||
 		!dict.Data.find(item=> parseInt(item.id) === parseInt(row.jtype) && parseInt(item.status) === 1) && errs.push(`Поле "Тип журнала" не содержится в справочнике.`);
 
+		dict = base.Dictionaries.List.find(item=> item.Name == "stores");
+		!row.store && errs.push("Не указано отделение.") ||
+		!dict.Data.find(item=> parseInt(item.dexUid) === parseInt(row.store) && parseInt(item.status) === 1) && errs.push(`Поле "Отделение" не содержится в справочнике.`);
+
 		// проверка полей документа
-		dict = base.Dictionaries.List.find(item=> item.Name == "identityDocuments");
-		!row?.document?.FizDocType && errs.push("Не указан тип документа удостоверяющего личность.") ||
-		!dict.Data.find(item=> parseInt(item.id) === parseInt(row.document.FizDocType) && parseInt(item.status) === 1) && errs.push(`Поле "Тип документа" не содержится в справочнике.`) ||
-		(errs = errs.concat(await base.Toolbox.CheckPassport(row.document, base.Connector, {Birth: row.document.Birth})));
+		if (errs.length == 0) {
+			let store = dict.Data.find(item=> parseInt(item.dexUid) === parseInt(row.store));
+			row.document.DocCity = store.dexDocCity || "";
 
-		let rxName = /^(([a-zA-Z' -]{2,80})|([а-яА-ЯЁё' -]{2,80}))$/u;
-		!row?.document?.LastName && errs.push(`Поле "Фамилия" обязательно для заполнения.`) || !rxName.test(row.document.LastName) && errs.push(`Поле "Фамилия" не соответствует шаблону.`);
-		!row?.document?.FirstName && errs.push(`Поле "Имя" обязательно для заполнения.`) || !rxName.test(row.document.FirstName) && errs.push(`Поле "Имя" не соответствует шаблону.`);
-		row?.document?.SecondName && row.document.SecondName != "" && !rxName.test(row.document.SecondName) && errs.push(`Поле "Отчество" не соответствует шаблону.`);
+			dict = base.Dictionaries.List.find(item=> item.Name == "identityDocuments");
+			!row?.document?.FizDocType && errs.push("Не указан тип документа удостоверяющего личность.") ||
+			!dict.Data.find(item=> parseInt(item.id) === parseInt(row.document.FizDocType) && parseInt(item.status) === 1) &&
+			errs.push(`Поле "Тип документа" не содержится в справочнике.`) ||
+			(errs = errs.concat(await base.Toolbox.CheckPassport(row.document, base.Connector, {Birth: row.document.Birth})));
 
+			let rxName = /^(([a-zA-Z' -]{2,80})|([а-яА-ЯЁё' -]{2,80}))$/u;
+			!row?.document?.LastName && errs.push(`Поле "Фамилия" обязательно для заполнения.`) ||
+			!rxName.test(row.document.LastName) && errs.push(`Поле "Фамилия" не соответствует шаблону.`);
+			!row?.document?.FirstName && errs.push(`Поле "Имя" обязательно для заполнения.`) ||
+			!rxName.test(row.document.FirstName) && errs.push(`Поле "Имя" не соответствует шаблону.`);
+			row?.document?.SecondName && row.document.SecondName != "" && !rxName.test(row.document.SecondName) && errs.push(`Поле "Отчество" не соответствует шаблону.`);
 
-		// console.log("==> ", dict.Data);
+			let rxZip = /^\d{6}$/;
+			!row?.document?.AddrZip && errs.push(`Поле "Индекс" обязательно для заполнения.`) ||
+			!rxZip.test(row.document.AddrZip) && errs.push(`Поле "Индекс" не соответствует шаблону.`);
+
+			let rxString = /^[A-ZА-ЯЁ]+$/i;
+			!row?.document?.FizBirthPlace && errs.push(`Поле "Место рождения" обязательно для заполнения.`)||
+			!rxString.test(row.document.FizBirthPlace)  && errs.push(`Поле "Место рождения" не соответствует шаблону.`);
+
+			dict = base.Dictionaries.List.find(item=> item.Name == "countries");
+			!row?.document?.Citizenship && errs.push(`Поле "Гражданство" обязательно для заполнения.`) ||
+			!dict.Data.find(item=> item.id == parseInt(row.document.Citizenship)) && errs.push(`Поле "Гражданство" не содержится в справочнике.`);
+
+			dict = base.Dictionaries.List.find(item=> item.Name == "sex");
+			!row?.document?.Sex && errs.push(`Поле "Пол" обязательно для заполнения.`) ||
+			!dict.Data.find(item=> item.id == parseInt(row.document.Sex)) && errs.push(`Поле "Пол" не содержится в справочнике.`);
+
+			dict = base.Dictionaries.List.find(item=> item.Name == "regions");
+			!row?.document?.AddrState && errs.push(`Поле "Субъект РФ" обязательно для заполнения.`) ||
+			!dict.Data.find(item=> item.id == parseInt(row.document.AddrState)) && errs.push(`Поле "Адрес регистрации - Субъект РФ" не содержится в справочнике.`);
+
+			dict = base.Dictionaries.List.find(item=> item.Name == "countries");
+			!row?.document?.AddrCountry && errs.push(`Поле "Адрес регистрации - Страна" обязательно для заполнения.`) ||
+			!dict.Data.find(item=> item.id == parseInt(row.document.AddrCountry)) && errs.push(`Поле "Адрес регистрации - Страна" не содержится в справочнике.`);
+
+			(!row?.document?.AddrCity || row.document.AddrCity == "") && errs.push(`Поле "Адрес регистрации-Населенный пункт" обязательно для пополнения.`);
+
+			let rxPhone = /^\d{10}$/;
+			!row?.document?.AddrPhone && errs.push(`Поле "Контактный телефон" обязательно для заполнения.`) ||
+			!rxPhone.test(row.document.AddrPhone) && errs.push(`Поле "Контактный телефон" не соответствует шаблону.`);
+		}
+
+		// if (errs.length == 0) {
+		// 	let checkSim = [];
+		// 	!row?.document?.sim && checkSim.push(`Не указаны параметры sim-карты`) ||
+		// 	!row?.document?.sim?.docReceipt && checkSim.push(`Не указан документ поступления`) ||
+		// 	!row?.document?.sim?.docRistribution && checkSim.push(`Не указан документ распределения`) ||
+		// 	!row?.document?.sim?.MSISDN && checkSim.push("Не указан номер sim-карты") ||
+		// 	!row?.document?.sim?.ICC && checkSim.push("Не указан серийный номер sim-карты");
+
+		// 	if (checkSim.length == 0) {
+		// 		let docReceipt = this.base.Core.Applications.find(item=> item.Name == "sklad").GetDocById(row.document.sim.docReceipt);
+		// 		let docRistribution = this.base.Core.Applications.find(item=> item.Name == "sklad").GetDocById(row.document.sim.docRistribution);
+		// 		!docReceipt && errs.push(`Указанный документ поступления не существует.`) ||
+		// 		!docReceipt.Data.find(item=> item.MSISDN == row.document.sim.MSISDN && item.ICC == row.document.sim.ICC) errs.push("Документ поступления не содержит данные sim-карты.") ||
+		// 		!docRistribution && errs.push(`Указанный документ распределения не существует.`) ||
+		// 		!docRistribution.Data.find(item=> item.MSISDN == row.document.sim.MSISDN && item.ICC == row.document.sim.ICC) errs.push("Документ поступления не содержит данные sim-карты.");
+		// 	} else errs = errs.concat(checkSim);
+		// }
 
 		console.log("errs=>", errs);
 

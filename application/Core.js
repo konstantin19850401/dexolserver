@@ -21,6 +21,7 @@ class Core {
 	get Dicts() { return this.#dicts; }
 	get Connector() { return this.#connectors.find(item=> item.Name == "mysql"); }
 	get Toolbox() { return TOOLBOX; }
+	get Applications() { return this.#applications; }
 
 	Start() {
 		this.#express.use(this.#AllowCrossDomain())
