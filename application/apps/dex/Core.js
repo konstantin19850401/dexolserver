@@ -88,7 +88,7 @@ class Base {
 		// 	if (!res) console.log("запись не удалена");
 		// }, 5000);
 		// setTimeout( async ()=> await this.EditJRecord({jtype: "journal", id: 500}), 5000);
-		setTimeout( async ()=> await JRecord.Create({status: 1, store: 1740, type: 1, jtype: 1, document: {
+		setTimeout( async ()=> await JRecord.Create({status: 1, userId: "dex", store: 1740, type: 1, jtype: 1, signature: "6366363636366363", jdocdate: "20221205145033333", document: {
 			FizDocType: 1,
 			FizDocSeries: 8305,
 			FizDocNumber: 866468,
@@ -119,6 +119,15 @@ class Base {
 			`);
 			for (let row of rows) journal.storage.push(new JRecord(row, this.#connector, this.#toolbox, this));
 		}
+	}
+	async LoadRecord(jurName, id) {
+		let journals = [{id: 1, name: "journal", storage: this.#journal}, {id: 2, name: "archive", storage: this.#archive}];
+		let journal = journals.find(item=> item.name == jurName);
+		let rows = await this.#connector.Request("dexol", `
+			SELECT * FROM ${this.#baseName}
+			WHERE id = '${id}'
+		`);
+		if (rows.length == 1) journal.storage.push(new JRecord(rows[0], this.#connector, this.#toolbox, this));
 	}
 	async #GetOperator(id) {
 		let rows = await this.#connector.Request("dexol", `
@@ -274,6 +283,12 @@ class JRecord {
 			!row?.document?.FizBirthPlace && errs.push(`Поле "Место рождения" обязательно для заполнения.`)||
 			!rxString.test(row.document.FizBirthPlace)  && errs.push(`Поле "Место рождения" не соответствует шаблону.`);
 
+			(!row?.document?.AddrCity || row.document.AddrCity == "") && errs.push(`Поле "Адрес регистрации-Населенный пункт" обязательно для пополнения.`);
+
+			let rxPhone = /^\d{10}$/;
+			!row?.document?.AddrPhone && errs.push(`Поле "Контактный телефон" обязательно для заполнения.`) ||
+			!rxPhone.test(row.document.AddrPhone) && errs.push(`Поле "Контактный телефон" не соответствует шаблону.`);
+
 			dict = base.Dictionaries.List.find(item=> item.Name == "countries");
 			!row?.document?.Citizenship && errs.push(`Поле "Гражданство" обязательно для заполнения.`) ||
 			!dict.Data.find(item=> item.id == parseInt(row.document.Citizenship)) && errs.push(`Поле "Гражданство" не содержится в справочнике.`);
@@ -290,11 +305,9 @@ class JRecord {
 			!row?.document?.AddrCountry && errs.push(`Поле "Адрес регистрации - Страна" обязательно для заполнения.`) ||
 			!dict.Data.find(item=> item.id == parseInt(row.document.AddrCountry)) && errs.push(`Поле "Адрес регистрации - Страна" не содержится в справочнике.`);
 
-			(!row?.document?.AddrCity || row.document.AddrCity == "") && errs.push(`Поле "Адрес регистрации-Населенный пункт" обязательно для пополнения.`);
+			dict = base.Dictionaries.List.find(item=> item.Name == "stores");
+			row.document.Fs = dict.Data.find(item=> parseInt(item.dexUid) === parseInt(row.store))?.Fs || 2;
 
-			let rxPhone = /^\d{10}$/;
-			!row?.document?.AddrPhone && errs.push(`Поле "Контактный телефон" обязательно для заполнения.`) ||
-			!rxPhone.test(row.document.AddrPhone) && errs.push(`Поле "Контактный телефон" не соответствует шаблону.`);
 		}
 
 		// if (errs.length == 0) {
@@ -315,6 +328,19 @@ class JRecord {
 		// 	} else errs = errs.concat(checkSim);
 		// }
 
+		if (errs.length == 0) {
+			for (let key in row.document) {
+				row.document[key] = base.Toolbox.HtmlSpecialChars(row.document[key]);
+			}
+			let result = await base.Connector.Request("dexol", `
+				INSERT INTO \`${base.BaseName}\`
+				SET userId = '${row.userId}', jtype = '1', store = '${row.store}', status = '${row.status}', signature = '${row.signature}', jdocdate = '${row.jdocdate}', data = '${JSON.stringify(row.document)}', type = '${row.type}', del = '0'
+			`);
+			if (!result || result.affectedRows != 1) errs.push("Ошибка в процессе добавления записи");
+			else {
+				await base.LoadRecord("journal", result.insertId);
+			}
+		}
 		console.log("errs=>", errs);
 
 	}
