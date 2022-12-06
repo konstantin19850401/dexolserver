@@ -1,6 +1,7 @@
 "use strict"
 const Api = require("./Api");
 const RulesMega = require("./RulesMega");
+const RulesMts = require("./RulesMts");
 class Core {
 	#name = "dex";#api;#core;#HTTP_STATUSES;#connector;#toolbox;
 	#list = [];
@@ -93,30 +94,30 @@ class Base {
 		// 	if (!res) console.log("запись не удалена");
 		// }, 5000);
 		// setTimeout( async ()=> await this.EditJRecord({jtype: "journal", id: 500}), 5000);
-		setTimeout( async ()=> await JRecord.Create({status: 1, userId: "dex", store: 1740, type: 1, jtype: 1, signature: "6366363636366363", jdocdate: "20221205145033333", document: {
-			FizDocType: 1,
-			FizDocSeries: 8305,
-			FizDocNumber: 866468,
-			FizDocOrg: "ОУФМС РФ по КБР в Чегемском р-не",
-			FizDocOrgCode: "000-000",
-			Birth: "01.04.1985",
-			DocDate: "26.04.2005",
-			FizDocDate: "05.04.2005",
-			FirstName: "Мыы",
-			SecondName: "Яыыы",
-			LastName: "Оввв",
-			FizBirthPlace: "ывсывсыв",
-			Sex: "1",
-			Citizenship: "10",
-			AddrZip: "222249",
-			AddrCountry: "1",
-			AddrState: "4",
-			AddrCity: "sdc",
-			AddrPhone: "9999999999"
-		}}, this), 5000);
+		// setTimeout( async ()=> await JRecord.Create({status: 1, userId: "dex", store: 1740, type: 1, jtype: 1, signature: "6366363636366363", jdocdate: "20221205145033333", document: {
+		// 	FizDocType: 1,
+		// 	FizDocSeries: 8305,
+		// 	FizDocNumber: 866468,
+		// 	FizDocOrg: "ОУФМС РФ по КБР в Чегемском р-не",
+		// 	FizDocOrgCode: "000-000",
+		// 	Birth: "01.04.1985",
+		// 	DocDate: "26.04.2005",
+		// 	FizDocDate: "05.04.2005",
+		// 	FirstName: "Мыы",
+		// 	SecondName: "Яыыы",
+		// 	LastName: "Оввв",
+		// 	FizBirthPlace: "ывсывсыв",
+		// 	Sex: "1",
+		// 	Citizenship: "10",
+		// 	AddrZip: "222249",
+		// 	AddrCountry: "1",
+		// 	AddrState: "4",
+		// 	AddrCity: "sdc",
+		// 	AddrPhone: "9999999999"
+		// }}, this), 5000);
 
 
-		let converter = new Converter(this.#toolbox, this.#connector, this);
+		setTimeout( ()=> { let converter = new Converter(this.#toolbox, this.#connector, this, RulesMts); }, 3000 );
 	}
 	async #LoadJournals() {
 		let journals = [{id: 1, name: "journal", storage: this.#journal}, {id: 2, name: "archive", storage: this.#archive}];
@@ -388,13 +389,20 @@ let testJRecord = {
 }
 
 class Converter {
-	#toolbox;#connector;#base;#operator;
-	constructor(toolbox, connector, base) {
+	#toolbox;#connector;#base;#operator;#rules;
+	constructor(toolbox, connector, base, rules) {
 		this.#toolbox = toolbox;
 		this.#connector = connector;
 		this.#base = base;
 		this.#operator = base.Operator;
-		this.#Init();
+		this.#rules = rules;
+		if (this.#base.BaseName == "dex_mts_sts_062013") {
+			this.#Init();
+		}
+		// this.#Init();
+		// console.log("this.#base.Name=> ", this.#base.Name);
+		// console.log("this.#base.Name=> ", this.#base.BaseName);
+		// console.log("this.#operator=> ", this.#operator);
 	}
 	async #Init() {
 		await this.#connector.Request("dexol", `
@@ -410,20 +418,31 @@ class Converter {
                 type TINYINT(1) NOT NULL,
                 del INT(2) NOT NULL DEFAULT 0,
                 primary key (id)
+            ) ENGINE = InnoDB
+            PARTITION BY HASH(id) (
+            	PARTITION p0 ENGINE=InnoDB,
+				PARTITION p1 ENGINE=InnoDB,
+				PARTITION p2 ENGINE=InnoDB,
+				PARTITION p3 ENGINE=InnoDB,
+				PARTITION p4 ENGINE=InnoDB,
+				PARTITION p5 ENGINE=InnoDB,
+				PARTITION p6 ENGINE=InnoDB,
+				PARTITION p7 ENGINE=InnoDB,
+				PARTITION p8 ENGINE=InnoDB,
+				PARTITION p9 ENGINE=InnoDB
             )
         `);
 
-
 		let jtypes = [{id: 2, name: "archive"}, {id: 1, name: "journal"}]
         // let jtypes = [{id: 2, name: "archive"}]
-        // let jtypes = [{id: 1, name: "journal"}]
+        // let jtypes = [{id: 1, name: "journal"}];
         for (let jtype of jtypes) {
             let cc = 0;
-
             let cnt = 0;let arr = [];
             // console.log("запрос типа ", jtype.name);
-            let rows = await this.#connector.Request("mega", `SELECT * FROM ${jtype.name}`);
-            console.log("получение данных и вставка ");
+            console.log("получение данных и вставка ", jtype.name);
+            let rows = await this.#connector.Request(this.#base.Name, `SELECT * FROM ${jtype.name}`);
+             console.log("Данные получены");
             let date = this.#toolbox.Moment();
             let inserts = [];
             for (let row of rows) {
@@ -473,67 +492,67 @@ class Converter {
                     data.document.DeliveryRegion = Array.isArray(temp.Document?.DeliveryRegion) ? temp.Document?.DeliveryRegion[0] : "";
 
                     //категория оплаты
-                    if (temp.Document?.DocCategory) {
-                        if (this.#operator == "MEGAFON") data.document.DocCategory = RulesMega.DocCategory(parseInt(temp.Document?.DocCategory[0]));
-                    }
+                    // if (temp.Document?.DocCategory) {
+                    //     if (this.#operator == "MEGAFON") data.document.DocCategory = RulesMega.DocCategory(parseInt(temp.Document?.DocCategory[0]));
+                    // }
 
-                    // пол
-                    if (temp.Document?.Sex) {
-                        if (this.#operator == "MEGAFON") data.document.Sex = RulesMega.Sex(parseInt(temp.Document?.Sex[0]));
-                    }
+                    // // пол
+                    // if (temp.Document?.Sex) {
+                    //     if (this.#operator == "MEGAFON") data.document.Sex = RulesMega.Sex(parseInt(temp.Document?.Sex[0]));
+                    // }
 
-                    // профиль отправки
-                    if (temp.Document?.ProfileCode) {
-                        if (this.#operator == "MEGAFON") data.document.ProfileCode = RulesMega.ProfileCode(temp.Document?.ProfileCode[0]);
-                        if (data.document.ProfileCode == "" && Array.isArray(temp.Document?.ProfileCode) && temp.Document?.ProfileCode[0] != "") {
-                            if (arr.indexOf(temp.Document.ProfileCode[0]) == -1) {
-                                arr.push(temp.Document.ProfileCode[0]);
-                                console.log(`"${temp.Document.ProfileCode[0].toLowerCase()}",`);
-                                if (cc == 10) break;
-                                else cc++;
-                            }
-                        }
-                    }
+                    // // профиль отправки
+                    // if (temp.Document?.ProfileCode) {
+                    //     if (this.#operator == "MEGAFON") data.document.ProfileCode = RulesMega.ProfileCode(temp.Document?.ProfileCode[0]);
+                    //     if (data.document.ProfileCode == "" && Array.isArray(temp.Document?.ProfileCode) && temp.Document?.ProfileCode[0] != "") {
+                    //         if (arr.indexOf(temp.Document.ProfileCode[0]) == -1) {
+                    //             arr.push(temp.Document.ProfileCode[0]);
+                    //             console.log(`"${temp.Document.ProfileCode[0].toLowerCase()}",`);
+                    //             if (cc == 10) break;
+                    //             else cc++;
+                    //         }
+                    //     }
+                    // }
 
-                    // страна
-                    if (temp.Document?.AddrCountry) {
-                        if (this.#operator == "MEGAFON") {
-                            data.document.AddCountry = RulesMega.GetCountry(temp.Document?.AddrCountry[0]);
-                            if (data.document.AddrCountry == "" && Array.isArray(temp.Document?.AddrCountry) && temp.Document?.AddrCountry[0] != "") {
-                                console.log(`для >${temp.Document?.AddrState[0]}< нет значения страны. id = `, row.id);
-                                if (cc == 5) break;
-                                else cc++;
-                            }
-                        }
-                    }
-                    // страна доставки
-                    if (temp.Document?.DeliveryCountry) {
-                        if (this.#operator == "MEGAFON") {
-                            data.document.DeliveryCountry = RulesMega.GetCountry(temp.Document?.DeliveryCountry[0]);
-                            if (data.document.DeliveryCountry == "" && Array.isArray(temp.Document?.DeliveryCountry) && temp.Document?.DeliveryCountry[0] != "") {
-                                console.log(`для >${temp.Document?.DeliveryCountry[0]}< нет значения страны доставки. id = `, row.id);
-                                if (cc == 5) break;
-                                else cc++;
-                            }
-                        }
-                    }
+                    // // страна
+                    // if (temp.Document?.AddrCountry) {
+                    //     if (this.#operator == "MEGAFON") {
+                    //         data.document.AddCountry = RulesMega.GetCountry(temp.Document?.AddrCountry[0]);
+                    //         if (data.document.AddrCountry == "" && Array.isArray(temp.Document?.AddrCountry) && temp.Document?.AddrCountry[0] != "") {
+                    //             console.log(`для >${temp.Document?.AddrState[0]}< нет значения страны. id = `, row.id);
+                    //             if (cc == 5) break;
+                    //             else cc++;
+                    //         }
+                    //     }
+                    // }
+                    // // страна доставки
+                    // if (temp.Document?.DeliveryCountry) {
+                    //     if (this.#operator == "MEGAFON") {
+                    //         data.document.DeliveryCountry = RulesMega.GetCountry(temp.Document?.DeliveryCountry[0]);
+                    //         if (data.document.DeliveryCountry == "" && Array.isArray(temp.Document?.DeliveryCountry) && temp.Document?.DeliveryCountry[0] != "") {
+                    //             console.log(`для >${temp.Document?.DeliveryCountry[0]}< нет значения страны доставки. id = `, row.id);
+                    //             if (cc == 5) break;
+                    //             else cc++;
+                    //         }
+                    //     }
+                    // }
 
-                    // тип абонента(резидент/нерезидент)
-                    if (temp.Document?.DocClientType) {
-                        if (this.#operator == "MEGAFON") {
-                            data.document.DocClientType = RulesMega.DocClientType(temp.Document?.DocClientType[0]);
-                            if (data.document.DocClientType == "" && Array.isArray(temp.Document?.DocClientType) && temp.Document?.DocClientType[0] != "") {
-                                console.log(`для >${temp.Document?.DocClientType[0]}< нет значения категории абонента. id = `, row.id);
-                                if (cc == 5) break;
-                                else cc++;
-                            }
-                        }
-                    }
+                    // // тип абонента(резидент/нерезидент)
+                    // if (temp.Document?.DocClientType) {
+                    //     if (this.#operator == "MEGAFON") {
+                    //         data.document.DocClientType = RulesMega.DocClientType(temp.Document?.DocClientType[0]);
+                    //         if (data.document.DocClientType == "" && Array.isArray(temp.Document?.DocClientType) && temp.Document?.DocClientType[0] != "") {
+                    //             console.log(`для >${temp.Document?.DocClientType[0]}< нет значения категории абонента. id = `, row.id);
+                    //             if (cc == 5) break;
+                    //             else cc++;
+                    //         }
+                    //     }
+                    // }
 
                     // регион
                     if (temp.Document?.AddrState) {
-                        if (this.#operator == "MEGAFON") {
-                            data.document.AddrState = RulesMega.AddrState(temp.Document?.AddrState[0]);
+                        if (this.#operator == "МТС") {
+                            data.document.AddrState = this.#rules.AddrState(temp.Document?.AddrState[0]);
                             if (data.document.AddrState == "" && Array.isArray(temp.Document?.AddrState) && temp.Document?.AddrState[0] != "") {
                                 if (arr.indexOf(temp.Document.AddrState[0]) == -1) {
                                     arr.push(temp.Document.AddrState[0]);
@@ -546,73 +565,77 @@ class Converter {
                         }
                     }
                     // регион доставки
-                    if (temp.Document?.DeliveryState) {
-                        if (this.#operator == "MEGAFON") {
-                            data.document.DeliveryState = RulesMega.AddrState(temp.Document?.DeliveryState[0]);
-                            if (data.document.DeliveryState == "" && Array.isArray(temp.Document?.DeliveryState) && temp.Document?.DeliveryState[0] != "") {
-                                if (arr.indexOf(temp.Document.DeliveryState[0]) == -1) {
-                                    arr.push(temp.Document.DeliveryState[0]);
-                                    console.log(`"${temp.Document.DeliveryState[0].toLowerCase()}",`);
-                                    if (cc == 40) break;
-                                    else cc++;
-                                }
+                    // if (temp.Document?.DeliveryState) {
+                    //     if (this.#operator == "MEGAFON") {
+                    //         data.document.DeliveryState = RulesMega.AddrState(temp.Document?.DeliveryState[0]);
+                    //         if (data.document.DeliveryState == "" && Array.isArray(temp.Document?.DeliveryState) && temp.Document?.DeliveryState[0] != "") {
+                    //             if (arr.indexOf(temp.Document.DeliveryState[0]) == -1) {
+                    //                 arr.push(temp.Document.DeliveryState[0]);
+                    //                 console.log(`"${temp.Document.DeliveryState[0].toLowerCase()}",`);
+                    //                 if (cc == 40) break;
+                    //                 else cc++;
+                    //             }
 
-                            }
-                        }
-                    }
+                    //         }
+                    //     }
+                    // }
 
                     // фирменный салон связи или нет
-                    if (Array.isArray(temp.Document?.fs)) {
+                    // if (Array.isArray(temp.Document?.fs)) {
 
-                        if (this.#operator == "MEGAFON") data.document.Fs = RulesMega.Fs(temp.Document.fs);
-                    } else data.document.Fs = 2;
+                    //     if (this.#operator == "MEGAFON") data.document.Fs = RulesMega.Fs(temp.Document.fs);
+                    // } else data.document.Fs = 2;
 
 
-                    //тип документа
-                    if (temp.Document?.gf && Array.isArray(temp.Document?.gf) && temp.Document?.gf[0] == "True") {
-                        try {
-                            data.document.FizDocType = RulesMega.FizDocTypeNew(parseInt(temp.Document?.FizDocType[0]));
-                        } catch(e) {
-                            docType = 3;
-                        }
-                    } else {
-                        try {
-                            if (this.#toolbox.IsNumber(temp.Document?.FizDocType[0])) {
-                                data.document.FizDocType = RulesMega.FizDocTypeOld(parseInt(temp.Document?.FizDocType[0]));
-                            } else {
-                                data.document.FizDocType = RulesMega.FizDocTypeOldString(temp.Document?.FizDocType[0]);
-                            }
+                    // //тип документа
+                    // if (temp.Document?.gf && Array.isArray(temp.Document?.gf) && temp.Document?.gf[0] == "True") {
+                    //     try {
+                    //         data.document.FizDocType = RulesMega.FizDocTypeNew(parseInt(temp.Document?.FizDocType[0]));
+                    //     } catch(e) {
+                    //         docType = 3;
+                    //     }
+                    // } else {
+                    //     try {
+                    //         if (this.#toolbox.IsNumber(temp.Document?.FizDocType[0])) {
+                    //             data.document.FizDocType = RulesMega.FizDocTypeOld(parseInt(temp.Document?.FizDocType[0]));
+                    //         } else {
+                    //             data.document.FizDocType = RulesMega.FizDocTypeOldString(temp.Document?.FizDocType[0]);
+                    //         }
 
-                        } catch(e) {
-                            docType = 3;
-                        }
-                    }
-                    if (data.document.FizDocType == "") console.log("Тип документа отсутствует для id = ", row.id);
+                    //     } catch(e) {
+                    //         docType = 3;
+                    //     }
+                    // }
+                    // if (data.document.FizDocType == "") console.log("Тип документа отсутствует для id = ", row.id);
 
 
 
                     for (let key in data.document) data.document[key] = this.#toolbox.HtmlSpecialChars(data.document[key]);
 
-                    // console.log("data=> ", data.document);
+                    // // console.log("data=> ", data.document);
 
-                    // если docType == 1, надо бы тогда с журналом разобраться
-                    if (docType == 1) {
-                        let logs = await this.#toolbox.XmlToString(row.journal);
-                        if (logs && logs?.journal?.record && logs?.journal?.record[0]) {
-                            if (logs.journal.record[0]?.text && logs.journal.record[0]?.text == "Документ сформирован функцией формирования группы документов") {
-                                docType = 2;
-                            } else if (logs.journal.record[0]?.text && logs.journal.record[0]?.text == "Документ на основе другого документа добавлен в журнал") {
-                                docType = 4;
-                            }
-                        } else console.log("для записи ", row.id, " странный журнал");
-                    }
+                    // // если docType == 1, надо бы тогда с журналом разобраться
+                    // if (docType == 1) {
+                    //     let logs = await this.#toolbox.XmlToString(row.journal);
+                    //     if (logs && logs?.journal?.record && logs?.journal?.record[0]) {
+                    //         if (logs.journal.record[0]?.text && logs.journal.record[0]?.text == "Документ сформирован функцией формирования группы документов") {
+                    //             docType = 2;
+                    //         } else if (logs.journal.record[0]?.text && logs.journal.record[0]?.text == "Документ на основе другого документа добавлен в журнал") {
+                    //             docType = 4;
+                    //         }
+                    //     } else console.log("для записи ", row.id, " журнал вполне возможно с ошибкой");
+                    // }
 
                     let userId;
                     if (row.userid == "dex") userId = "";
                     else {
-                        userId = RulesMega.UserId(row.userid);
-                        if (userId == "") console.log("нет userid для ", row.userid);
+                        userId = this.#rules.UserId(row.userid);
+                        if (userId == "") {
+                        	console.log(`нет userid для >${row.userid}<`);
+                        	cc++;
+                        }
                     }
+                    if (cc == 3) break;
 
                     let time = date(row.signature, "YYYYMMDDhhmmssSSS").format("YYYY-MM-DD hh:mm:ss.SSS");
                     // await this.#connector.Request("dexol", `

@@ -62,126 +62,39 @@ module.exports = RulesMega;
 let users = [
 	{mega: ["admin"], base: "admin"},
 	{mega: ["SYSTEM"], base: "SYSTEM"},
-	{mega: ["9bb8170f8c6a5fe956984d6cbfc372e4"], base: "agapovicheva"},
-	{mega: ["92837bdb344750760b336a37fa50263e"], base: "kuznecova"},
-	{mega: ["d8bb4885cbe1dc077fb6c2529a1e301a"], base: "shemota"},
-	{mega: ["7dffa7d3a6677ff5005e4d77c5d5b3ae"], base: "savchenko"},
-	{mega: ["85abdf2bd7f7e3b3cb13bd58e2aaf7ec"], base: "argashokova"},
-	{mega: ["e1052687da86b1c0c5fa807c8b997e86"], base: "antushina"},
-	{mega: ["1d848f20fb51f8f08e2fdd0d089bf742"], base: "arutunyan"},
-	{mega: ["8b8938dc892ccbe32960984a321e05ca"], base: "barisheva"},
-	{mega: ["11f68ad7356b0ce3ba823b00869b3d94"], base: "goncharenko"},
+	{mega: ["2bf432c81b3f4875e01d76cbfb9d844a"], base: "savchenko"},
+	{mega: ["df6c168ccf2e4392cd798e14b059c632"], base: "barisheva"},
+	{mega: ["233168e7cd1d87776fabcbbfb9cad07d"], base: "arutunyan"},
+	{mega: ["408f2bde3355da18a420b4b4db745750"], base: "marchenko"},
 	{mega: ["3463406ca4aa934ebe32221c936bc066"], base: "grineva"},
-	{mega: ["0e100a9a3798471ebad31300a4fce764"], base: "fursina"},
-	{mega: ["ab7de45438cc2fb16116f97aaff41e00"], base: "bogdanova"},
-	{mega: ["f454e29d2e24713d2b9c03b040ccd94e"], base: "marchenko"},
-	{mega: ["183965cf2081394f85f67639597f3fa1"], base: "zubkova"},
-	{mega: ["e9e3c5f1868b998e438c42a249289c29"], base: "zaiceva"},
-	{mega: ["59f7429bdd7bf39dbcee824a2b2d4f64"], base: "krasnova"},
-	{mega: ["3ae81cc938816038bd65b5afb944ea5a"], base: "sokolova"},
-	{mega: ["d066a915eb00f00ba3bc299c7af94058"], base: "Operator"},
-	{mega: ["3a468e70c8027a1fdb3ab92ddfc6b906"], base: "chromih"},
-	{mega: ["a715ef1091be8c10faea226e70fd75d6"], base: "Laipanova"},
-	{mega: ["6f5cfede7a2f303c6828762cc39f58dd"], base: "luganskaya"},
-	{mega: ["00003f7f51c8eaab7ecc7ddf7d384a5c"], base: "kadjayants"},
-	{mega: ["89d85e3078ede809908528ddb651f06c"], base: "sindyanova"},
-	{mega: ["2fcb25aa42b00a91f4e455e288ba6579"], base: "khachaturyan"},
-	{mega: ["ca6c50f72ca305a232cc1a4c9f50eee8"], base: "bisraeva"},
-	{mega: ["12b583981d8fa6bb8e4a44e1b57436f6"], base: "vartanyan"},
-	{mega: ["3b4eb5ae9176e515a0053db14355d7ef"], base: "ermakova"},
-	{mega: ["1e2e02d626ab756b7c4cbfd2fea6fb37"], base: "besshkurova"},
-	{mega: ["476101eb1d4111b02ba70252f33898a8"], base: "feneva"},
-	{mega: ["c099ae1c932711a88111268b61236ec3"], base: "alina"},
-	{mega: ["50634d0846664dc7ccc807c9aa3e857c"], base: "kolesnikova"},
-	{mega: ["6055cea2e9ca2c173a6dd0fc38b5d607"], base: "stajer1"},
-	{mega: ["11c64f0afc34b85e9214361b53496ab0"], base: "polnikova"},
-	{mega: ["533db4cfacd871348ec9830b13e988e8"], base: "stajer2"},
-	{mega: ["cb04d8db681fc2f4de1926c86f99f4e0"], base: "kalmykova"},
-	{mega: ["f6a924389d8bcbfd6a33eefa03e2a322"], base: "shmavonyan"},
+	{mega: ["328124c189dabc9126a70d217208a211"], base: "kuznetcova"},
+	{mega: ["0f099aec195eebf653efff13bba28fd0"], base: "shemota"},
+	{mega: ["b957f9253afd13cf3ae0e9c1e14b5b04"], base: "argashokova"},
+	{mega: ["5fc63171a76ab24341bbf323f3b4b62e"], base: "bogdanova"},
+	{mega: ["fb3ef26b375dcb7179b2db3205a28851"], base: "fursina"},
+	{mega: ["d94fb61a93eb1ac3d0ec997b1498359d"], base: "kuznetsova2"},
+	{mega: ["9958c59c96e3278768e3506b2672bfaf"], base: "zaiceva"},
+	{mega: ["7c2218c5ac6ca5e644fcf8dc41df7411"], base: "operator"},
+	{mega: ["9256673527ae2871d551c51069e6d225"], base: "chromih"},
+	{mega: ["28cb51bd11553db112ae52df7d8da0bd"], base: "komarova"},
+	{mega: ["0f91f137a1bc84ac20a80bd4993f4494"], base: "luganskya"},
+	{mega: ["e141a9a27c727eee8bf91adf953c7932"], base: "kadjayants"},
+	{mega: ["335727591fad72ffff4cb3d3ff37b0fb"], base: "sindyanova"},
+	{mega: ["83aeed5486f0842abb933cbddabb9f5c"], base: "khachaturyan"},
+	{mega: ["5b311f5f5cce45b5b6e74e92deb2141e"], base: "luganskaya"},
+	{mega: ["dc6860325ff6a3188e80f9c1d2ba382b"], base: "bisraeva"},
+	{mega: ["493af31ee38658d0b15a7ac6321f87d5"], base: "vartanyan"},
+	{mega: ["4828506276c97b0ac70bbc947264811e"], base: "ermakova"},
+	{mega: ["3a63cb81459707afee743fcc662af932"], base: "besshkurova"},
+	{mega: ["83e5c5c7989c23133d9a283b9a0c853c"], base: "alina"},
+	{mega: ["bf29b63ccf60e5293eccc0c1d9217692"], base: "kolesnikova"},
+	{mega: ["7a706475c33835cefc396a82895a3102"], base: "stajer1"},
+	{mega: ["8817e662d3241752ecc8a03a92e10d72"], base: "polnikova"},
+	{mega: ["9f9fd03f8805739351ad2006f96aaed8"], base: "stajer2"},
+	{mega: ["861dd13671e5afce47621bf6059809c9"], base: "kalmykova"},
+	{mega: ["392eed2b37b694d82dbfb4f67676def4"], base: "shmavonyan"},
 	{mega: ["92ac5fbfd67205e1ebda642b54aabde5"], base: "braterskaya"},
-	{mega: ["952715aae4fc90656d960ba3e8026727"], base: "nikiforova"},
-]
-
-let countries = [
-	{mega: [1,293,567], base: 235},
-	{mega: [232], base: 49},
-	{mega: [174], base: 233},
-	{mega: [124], base: 63},
-	{mega: [71], base: 231},
-	{mega: [175], base: 236},
-	{mega: [242], base: 36},
-	{mega: [240], base: 60},
-	{mega: [165], base: 42},
-	{mega: [108], base: 63},
-	{mega: [237], base: 75},
-	{mega: [32], base: 234},
-	{mega: [208], base: 126},
-	{mega: [125], base: 103},
-	{mega: [176], base: 127},
-
-
-	{mega: [653,249,100], base: -1},
-]
-
-let oldftypes = [
-	{mega: [8], base: 4}, //Вид на жительство
-	{mega: [3], base: 3}, //Военный билет
-	{mega: [0], base: 14}, //Не определен
-	{mega: [4], base: 12}, //Офицерское удостоверение
-	{mega: [1,759220,429660,8207,6,5], base: 1}, //Паспорт
-	{mega: [2], base: 5}, //Паспорт заграничный
-	{mega: [22], base: 2},//Паспорт иностранный
-	{mega: [7], base: 17}, //Свидетельство о рождении
-	{mega: [24], base: 18},//Справка об освобождении
-]
-let oldftypesString = [
-	// {mega: [8], base: 4}, //Вид на жительство
-	// {mega: [3], base: 3}, //Военный билет
-	{mega: ["Другой документ","другой документ","Дд","ДРугой документ"], base: 14}, //Не определен
-	// {mega: [4], base: 12}, //Офицерское удостоверение
-	{mega: ["Паспорт","паспорт",","], base: 1}, //Паспорт
-	// {mega: [2], base: 5}, //Паспорт заграничный
-	{mega: ["Инностранный паспорт","Ин","До"], base: 2},//Паспорт иностранный
-	// {mega: [7], base: 17}, //Свидетельство о рождении
-	// {mega: [24], base: 18},//Справка об освобождении
-]
-let newftypes = [
-	{mega: [8], base: 4}, //Вид на жительство
-	{mega: [3], base: 3}, //Военный билет
-	{mega: [0], base: 14}, //Не определен
-	{mega: [1], base: 1}, //Паспорт
-	{mega: [104,22], base: 2},//Паспорт иностранный
-	{mega: [7], base: 17}, //Свидетельство о рождении
-	{mega: [24], base: 18},//Справка об освобождении
-	{mega: [100], base: 7},//Временное удостов. личности
-	{mega: [106], base: 7},//Иностр. паспорт моряка
-	{mega: [103], base: 3},//Паспорт моряка
-	{mega: [102], base: 19},//Паспорт СССР
-	{mega: [101], base: 6},//Разреш. на врем. проживание
-	{mega: [108], base: 10},//Св-во о предостав убежища в РФ
-	{mega: [107], base: 11},//Св-во о рассм. приз. беженцем
-	{mega: [105], base: 13},//Удостоверение беженца
-	{mega: [4], base: -1},//Удостоверение беженца
-]
-
-let profiles = [
-	{mega: ["ofis_kbr","ofis kbr"], base: 1},
-	{mega: ["ofis"], base: 2},
-	{mega: ["ofis_khr"], base: 3},
-	{mega: ["ofis_sk_new"], base: 4},
-	{mega: ["pyat3"], base: 5},
-	{mega: ["pyat2"], base: 6},
-	{mega: ["kara3"], base: 7},
-	{mega: ["kara4"], base: 8},
-	{mega: ["green_dots_bogatyreva"], base: 9},
-	{mega: ["green_dots_sk"], base: 10},
-	{mega: ["green_dots_kbr"], base: 11},
-	{mega: ["green_dots_kcr"], base: 12},
-	{mega: ["fst_kbr"], base: 13},
-	{mega: ["pyat"], base: 14},
-	{mega: ["kara"], base: 15},
-	{mega: ["kara2"], base: 16},
-	{mega: ["zaharova"], base: 17},
+	{mega: ["952715aae4fc90656d960ba3e8026727"], base: "nikiforova"}
 ]
 
 let addrStates = [
