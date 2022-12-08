@@ -396,7 +396,7 @@ class Converter {
 		this.#base = base;
 		this.#operator = base.Operator;
 		this.#rules = rules;
-		if (this.#base.BaseName == "dex_mts_sts_062013") {
+		if (this.#base.BaseName == "dex_mts_kcr") {
 			this.#Init();
 		}
 		// this.#Init();
@@ -442,7 +442,7 @@ class Converter {
             // console.log("запрос типа ", jtype.name);
             console.log("получение данных и вставка ", jtype.name);
             let rows = await this.#connector.Request(this.#base.Name, `SELECT * FROM ${jtype.name}`);
-             console.log("Данные получены");
+             console.log("Данные получены. Количество строк => ", rows.length);
             let date = this.#toolbox.Moment();
             let inserts = [];
             for (let row of rows) {
@@ -525,8 +525,8 @@ class Converter {
                         data.document.AddrCountry = this.#rules.GetCountry(temp.Document?.AddrCountry[0]);
                         if (data.document.AddrCountry == "" && Array.isArray(temp.Document?.AddrCountry) && temp.Document?.AddrCountry[0] != "") {
                             console.log(`для >${temp.Document?.AddrState[0]}< нет значения страны. id = `, row.id);
-                            if (cc == 5) break;
-                            else cc++;
+                            // if (cc == 5) break;
+                            // else cc++;
                         }
                     } else {
                     	data.document.AddrCountry = "";
@@ -566,8 +566,8 @@ class Converter {
                             if (arr.indexOf(temp.Document.AddrState[0]) == -1) {
                                 arr.push(temp.Document.AddrState[0]);
                                 console.log(`"${temp.Document.AddrState[0].toLowerCase()}",`);
-                                if (cc == 40) break;
-                                else cc++;
+                                // if (cc > 70) break;
+                                // else cc++;
                             }
 
                         }
@@ -625,7 +625,9 @@ class Converter {
                     }
 
                     if (data.document.FizDocType == "" && temp.Document?.FizDocType) {
-                    	if (arr.indexOf(parseInt(temp.Document?.FizDocType[0]?._)) == -1) {
+                    	if (typeof temp.Document?.FizDocType[0]?._ === "undefined") {
+                    		data.document.FizDocType = "";
+                    	} else if (arr.indexOf(parseInt(temp.Document?.FizDocType[0]?._)) == -1) {
                     		arr.push(parseInt(temp.Document?.FizDocType[0]?._));
                     		console.log("Тип документа отсутствует для id = ", row.id, " ==> ", temp.Document?.FizDocType[0]?._);
                     		cc++
@@ -693,7 +695,7 @@ class Converter {
                         	cc++;
                         }
                     }
-                    if (cc == 40) break;
+                    // if (cc > 70) break;
 
                     let time = date(row.signature, "YYYYMMDDhhmmssSSS").format("YYYY-MM-DD hh:mm:ss.SSS");
                     // await this.#connector.Request("dexol", `

@@ -62,8 +62,10 @@ class Toolbox {
 	}
 	static async XmlToString(xml) {
 		return new Promise((resolve, reject)=> {
-            xml2js.parseString(xml, function(err, obj) {
-                if (err) console.log("ошибка парсинга xml==> ", err);
+			xml2js.parseString(xml, function(err, obj) {
+                if (err) {
+                	console.log("ошибка парсинга xml==> ", err, " пришедший xml=> ", xml);
+                }
                 resolve(obj);
             })
         })

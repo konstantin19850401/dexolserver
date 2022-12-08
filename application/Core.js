@@ -65,8 +65,13 @@ class Core {
 	#InitDefConnection() {
 		let mysql = this.#connectors.find(item=> item.Name == "mysql");
 		mysql.AddBase({name: "dexol", host: "127.0.0.1", user: "dex", password: "12473513", database: "dexol_system"});
+
 		mysql.AddBase({name: "mega", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mega"});
 		mysql.AddBase({name: "mts_sts_062013", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mts_sts_062013"});
+		mysql.AddBase({name: "mts_sts", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mts_sts"});
+		mysql.AddBase({name: "mts_kbr", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mts_kbr"});
+		mysql.AddBase({name: "mts_kbr_salp", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mts_kbr_salp"});
+		mysql.AddBase({name: "mts_kcr", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mts_kcr"});
 		return true;
 	}
 	#InitApps() {
