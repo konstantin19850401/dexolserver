@@ -2,6 +2,7 @@
 const Api = require("./Api");
 const RulesMega = require("./RulesMega");
 const RulesMts = require("./RulesMts");
+const RulesYota = require("./RulesYota");
 class Core {
 	#name = "dex";#api;#core;#HTTP_STATUSES;#connector;#toolbox;
 	#list = [];
@@ -117,7 +118,7 @@ class Base {
 		// }}, this), 5000);
 
 
-		setTimeout( ()=> { let converter = new Converter(this.#toolbox, this.#connector, this, RulesMts); }, 3000 );
+		setTimeout( ()=> { let converter = new Converter(this.#toolbox, this.#connector, this, RulesYota); }, 3000 );
 	}
 	async #LoadJournals() {
 		let journals = [{id: 1, name: "journal", storage: this.#journal}, {id: 2, name: "archive", storage: this.#archive}];
@@ -396,7 +397,7 @@ class Converter {
 		this.#base = base;
 		this.#operator = base.Operator;
 		this.#rules = rules;
-		if (this.#base.BaseName == "dex_mts_kcr") {
+		if (this.#base.BaseName == "dex_yota") {
 			this.#Init();
 		}
 		// this.#Init();
@@ -521,16 +522,25 @@ class Converter {
                     // }
 
                     // // страна
-                    if (temp.Document?.AddrCountry) {
+                	if (temp.Document?.AddrCountry) {
                         data.document.AddrCountry = this.#rules.GetCountry(temp.Document?.AddrCountry[0]);
                         if (data.document.AddrCountry == "" && Array.isArray(temp.Document?.AddrCountry) && temp.Document?.AddrCountry[0] != "") {
-                            console.log(`для >${temp.Document?.AddrState[0]}< нет значения страны. id = `, row.id);
+                        	 if (arr.indexOf(temp.Document.AddrCountry[0]) == -1) {
+                                arr.push(temp.Document.AddrCountry[0]);
+                                console.log(`"${temp.Document.AddrCountry[0].toLowerCase()}",`);
+                                console.log(`для >${temp.Document?.AddrCountry[0]}< нет значения страны. id = `, row.id);
+                                if (cc > 70) break;
+                                else cc++;
+                            }
+
+                            
                             // if (cc == 5) break;
                             // else cc++;
                         }
                     } else {
                     	data.document.AddrCountry = "";
                     }
+                
                     // // страна доставки
                     // if (temp.Document?.DeliveryCountry) {
                     //     if (this.#operator == "MEGAFON") {
@@ -595,7 +605,7 @@ class Converter {
 
 
                     // //тип документа
-                    if (this.#operator == "MEGAFON") {
+                    if (this.#operator == "MEGAFON" || this.#operator == "YOTA") {
                     	if (temp.Document?.gf && Array.isArray(temp.Document?.gf) && temp.Document?.gf[0] == "True") {
 	                        try {
 	                            data.document.FizDocType = this.#rules.FizDocTypeNew(parseInt(temp.Document?.FizDocType[0]));
@@ -608,6 +618,16 @@ class Converter {
 	                                data.document.FizDocType = this.#rules.FizDocTypeOld(parseInt(temp.Document?.FizDocType[0]));
 	                            } else {
 	                                data.document.FizDocType = this.#rules.FizDocTypeOldString(temp.Document?.FizDocType[0]);
+
+	                                if (data.document.FizDocType == 14) {
+		                    			data.document.FizDocOtherType = temp.Document?.FizDocOtherDocTypes ? this.#rules.FizDocTypeOldString(temp.Document?.FizDocOtherDocTypes[0]) : "";
+		                    			if (data.document.FizDocOtherType == "" && arr.indexOf(data.document.FizDocOtherType) == -1) {
+				                    		arr.push(temp.Document?.FizDocOtherDocTypes[0]);
+				                    		console.log("Тип документа отсутствует для id = ", row.id, " ==> ", temp.Document?.FizDocOtherDocTypes[0]);
+				                    		if (cc > 70) break;
+			                                else cc++;
+			                    		}
+		                    		}
 	                            }
 	                        } catch(e) {
 	                            docType = 3;
@@ -625,28 +645,81 @@ class Converter {
                     }
 
                     if (data.document.FizDocType == "" && temp.Document?.FizDocType) {
-                    	if (typeof temp.Document?.FizDocType[0]?._ === "undefined") {
+                    	if (this.#operator == "YOTA") {
+                    		if (data.document.FizDocType == 14) {
+                    			console.log("+++");
+                    			data.document.FizDocOtherType = temp.Document?.FizDocOtherDocTypes ? this.#rules.FizDocTypeOldString(temp.Document?.FizDocOtherDocTypes[0]) : "";
+                    			if (arr.indexOf(temp.Document?.FizDocOtherDocTypes[0]) == -1) {
+		                    		arr.push(temp.Document?.FizDocOtherDocTypes[0]);
+		                    		console.log("Тип документа отсутствует для id = ", row.id, " ==> ", temp.Document?.FizDocOtherDocTypes[0]);
+		                    		if (cc > 70) break;
+	                                else cc++;
+	                    		}
+                    		} else {
+                    			if (arr.indexOf(temp.Document?.FizDocType[0]) == -1) {
+		                    		arr.push(temp.Document?.FizDocType[0]);
+		                    		console.log("Тип документа отсутствует для id = ", row.id, " ==> ", temp.Document?.FizDocType[0]);
+		                    		if (cc > 70) break;
+	                                else cc++;
+	                    		}
+                    		}
+
+                    		
+                    	} else if (typeof temp.Document?.FizDocType[0]?._ === "undefined") {
                     		data.document.FizDocType = "";
                     	} else if (arr.indexOf(parseInt(temp.Document?.FizDocType[0]?._)) == -1) {
                     		arr.push(parseInt(temp.Document?.FizDocType[0]?._));
                     		console.log("Тип документа отсутствует для id = ", row.id, " ==> ", temp.Document?.FizDocType[0]?._);
                     		cc++
                     	}
-                    }
+                    } 
 
 					
 					if (temp.Document?.FizDocCitizen && Array.isArray(temp.Document.FizDocCitizen)) {
 						if (this.#operator == "MTS") {
-							data.document.Citizenship = temp.Document?.FizDocCitizen[0]?.$?.tag ? this.#rules.GetCountry(temp.Document?.FizDocCitizen[0]?.$?.tag) : "";
+							data.document.Citizenship = temp.Document?.FizDocCitizen[0]?.$?.tag ? this.#rules.GetCountry(parseInt(temp.Document?.FizDocCitizen[0]?.$?.tag)) : "";
 							if (data.document.Citizenship == "") {
-								if (arr.indexOf(temp.Document?.FizDocCitizen[0]?.$?.tag) == -1) {
-	                                arr.push(temp.Document?.FizDocCitizen[0]?.$?.tag);
-	                                console.log(`"${temp.Document?.FizDocCitizen[0]?.$?.tag}", `, temp.Document?.FizDocCitizen[0]?._, " id=>", row.id);
+								if (temp.Document?.FizDocCitizen[0]?.$?.tag == "Российская Федерация") {
+									data.document.Citizenship = 235
+								} else if (temp.Document?.FizDocCitizen[0] == "") {
+									data.document.Citizenship = "";
+								} else if (arr.indexOf(parseInt(temp.Document?.FizDocCitizen[0]?.$?.tag)) == -1) {
+									console.log("---temp.Document?.FizDocCitizen=> ", temp.Document?.FizDocCitizen);
+	                                arr.push(parseInt(temp.Document?.FizDocCitizen[0]?.$?.tag));
+	                                console.log(`---"${temp.Document?.FizDocCitizen[0]?.$?.tag}", `, temp.Document?.FizDocCitizen[0]?._, " id=>", row.id);
 	                                // if (cc == 10) break;
 	                                cc++;
 	                            }
 							}
-						}	
+						} else if (this.#operator == "YOTA") {
+							data.document.Citizenship = this.#rules.GetCountry(parseInt(temp.Document?.FizDocCitizen[0]));
+							if (data.document.Citizenship == "") {
+								if (Array.isArray(temp.Document?.FizDocCitizen) && temp.Document?.FizDocCitizen[0] != "") {
+		                        	if (arr.indexOf(temp.Document.FizDocCitizen[0]) == -1) {
+		                                arr.push(temp.Document.FizDocCitizen[0]);
+		                                console.log(`+++"${temp.Document.FizDocCitizen[0].toLowerCase()}",`);
+		                                console.log("+++temp.Document?.FizDocCitizen=> ", temp.Document?.FizDocCitizen);
+		                                if (cc > 70) break;
+		                                else cc++;
+		                            }
+
+		                            
+		                            // if (cc == 5) break;
+		                            // else cc++;
+		                        }
+	                    	}
+
+
+							// if (data.document.Citizenship == "") {
+							// 	if (arr.indexOf(parseInt(temp.Document?.FizDocCitizen[0])) == -1) {
+							// 		console.log("temp.Document?.FizDocCitizen=> ", temp.Document?.FizDocCitizen);
+	                        //         arr.push(parseInt(temp.Document?.FizDocCitizen[0]));
+	                        //         console.log(`"${temp.Document?.FizDocCitizen[0]}", `, temp.Document?.FizDocCitizen[0], " id=>", row.id);
+	                        //         // if (cc == 10) break;
+	                        //         cc++;
+	                        //     }
+							// }
+						}
 					}                    
 
 
@@ -691,7 +764,7 @@ class Converter {
                     else {
                         userId = this.#rules.UserId(row.userid);
                         if (userId == "") {
-                        	// console.log(`нет userid для >${row.userid}< row.id=> `, row.id);
+                        	console.log(`нет userid для >${row.userid}< row.id=> `, row.id);
                         	cc++;
                         }
                     }
