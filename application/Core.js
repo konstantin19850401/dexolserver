@@ -74,6 +74,8 @@ class Core {
 		mysql.AddBase({name: "mts_kcr", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mts_kcr"});
 		mysql.AddBase({name: "mts_kcr_distr", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mts_kcr_distr"});
 		mysql.AddBase({name: "yota", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_yota"});
+		mysql.AddBase({name: "beeline_sts", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_beeline_sts"});
+		mysql.AddBase({name: "beeline_kcr", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_beeline_kcr"});
 		return true;
 	}
 	#InitApps() {

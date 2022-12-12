@@ -3,6 +3,7 @@ const Api = require("./Api");
 const RulesMega = require("./RulesMega");
 const RulesMts = require("./RulesMts");
 const RulesYota = require("./RulesYota");
+const RulesBeeline = require("./RulesBeeline");
 class Core {
 	#name = "dex";#api;#core;#HTTP_STATUSES;#connector;#toolbox;
 	#list = [];
@@ -118,7 +119,7 @@ class Base {
 		// }}, this), 5000);
 
 
-		setTimeout( ()=> { let converter = new Converter(this.#toolbox, this.#connector, this, RulesYota); }, 3000 );
+		setTimeout( ()=> { let converter = new Converter(this.#toolbox, this.#connector, this, RulesBeeline); }, 3000 );
 	}
 	async #LoadJournals() {
 		let journals = [{id: 1, name: "journal", storage: this.#journal}, {id: 2, name: "archive", storage: this.#archive}];
@@ -397,8 +398,8 @@ class Converter {
 		this.#base = base;
 		this.#operator = base.Operator;
 		this.#rules = rules;
-		if (this.#base.BaseName == "dex_yota") {
-			this.#Init();
+		if (this.#base.BaseName == "dex_beeline_kcr") {
+			// this.#Init();
 		}
 		// this.#Init();
 		// console.log("this.#base.Name=> ", this.#base.Name);
@@ -633,7 +634,7 @@ class Converter {
 	                            docType = 3;
 	                        }
 	                    }
-                    } else if (this.#operator == "MTS") {
+                    } else if (this.#operator == "MTS" || this.#operator == "BEELINE") {
                     	if (temp.Document?.FizDocType && Array.isArray(temp.Document?.FizDocType)) {
                     		if (temp.Document?.FizDocType[0]?._) {
 	                    		data.document.FizDocType = this.#rules.FizDocType(parseInt(temp.Document?.FizDocType[0]?._));
@@ -642,7 +643,8 @@ class Converter {
 	                    	}
                     	} else data.document.FizDocType = "";
 
-                    }
+                    } 
+
 
                     if (data.document.FizDocType == "" && temp.Document?.FizDocType) {
                     	if (this.#operator == "YOTA") {
@@ -748,6 +750,9 @@ class Converter {
                             } else if (logs?.root?.journal?.record && logs?.root?.journal?.record[0]?.text == "Документ на основе другого документа добавлен в журнал") {
                                 docType = 4;
                             }
+                        } else if (logs && logs?.journal == "") {
+                        	logs = {};
+                        	docType = 2;
                         } else { 
                         	if (!logs) {
                         		logs = {};
