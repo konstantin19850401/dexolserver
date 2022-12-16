@@ -5,6 +5,7 @@ const https = require('https');
 const request = require("request");
 const bz2 = require('unbzip2-stream');
 const tarfs = require('tar-fs');
+const lineReader = require('line-by-line');
 
 class Tasks {
 	#name = "tasks";#core;#connector;#toolbox;#api;#HttpStatuses;
@@ -19,7 +20,7 @@ class Tasks {
 	get Name() { return this.#name; }
 
 	async #Init() {
-		let expiredPassports = new ExpiredPassports(this.#core);
+		// let expiredPassports = new ExpiredPassports(this.#core);
 	}
 	
 }
@@ -45,29 +46,47 @@ class Packet {
 
 
 class ExpiredPassports {
-	#core;
+	#core;#pathArhive;#pathCsv;#url;
+	#myInterface;#data = [];
 	constructor(core) {
 		this.#core = core;
+		this.#pathArhive = `${this.#core.TempDir}/list_of_expired_passports.csv.bz2`;
+		this.#pathCsv = `${this.#core.TempDir}/list_of_expired_passports.csv`;
+		this.#url = `https://проверки.гувм.мвд.рф/upload/expired-passports/list_of_expired_passports.csv.bz2`;
 		this.#Init();
 	}
 	async #Init() {
+		await this.#core.Connector.Request("dexol", `
+            CREATE TABLE IF NOT EXISTS expired_passports (
+                value VARCHAR(11) NOT NULL UNIQUE
+            ) ENGINE = InnoDB
+            PARTITION BY KEY(value) (
+            	PARTITION p0 ENGINE=InnoDB,
+				PARTITION p1 ENGINE=InnoDB,
+				PARTITION p2 ENGINE=InnoDB,
+				PARTITION p3 ENGINE=InnoDB,
+				PARTITION p4 ENGINE=InnoDB,
+				PARTITION p5 ENGINE=InnoDB,
+				PARTITION p6 ENGINE=InnoDB,
+				PARTITION p7 ENGINE=InnoDB,
+				PARTITION p8 ENGINE=InnoDB,
+				PARTITION p9 ENGINE=InnoDB
+            )
+        `);
+
 		if (await this.#DownloadFile() && await this.#ExtractZip()) {
 			console.log("Скачали и распаковали");
+			this.#data = [];
+			this.#Update();
 		} else {
 			console.log("Ошибка. Не делаем");
 		}
-
-		// let ifDownload = true || await this.#DownloadFile();
-		// if (ifDownload) {
-		// 	let isExtract = await this.#ExtractZip();
-		// } else console.log("Загрузка завершилась с ошибкой");
 	}
 	async #DownloadFile() {
 		return new Promise((resolve, reject)=> {
-			let dest = `${this.#core.TempDir}/list_of_expired_passports.csv.bz2`;
-			let file = fs.createWriteStream(dest);
+			let file = fs.createWriteStream(this.#pathArhive);
 			https
-				.get(`https://проверки.гувм.мвд.рф/upload/expired-passports/list_of_expired_passports.csv.bz2`, response=> {
+				.get(this.#url, response=> {
 					response.pipe(file)
 						file
 						.on("finish", ()=> {
@@ -75,7 +94,7 @@ class ExpiredPassports {
 							resolve(true);
 						})
 						.on("error", err=> { 
-							fs.unlink(dest, () => console.log(err.message));
+							fs.unlink(this.#pathArhive, () => console.log(err.message));
 							reject(false);
 						});
 				})
@@ -85,9 +104,41 @@ class ExpiredPassports {
 	}
 	async #ExtractZip() {
 		return new Promise((resolve, reject)=> {
-			let source = `${this.#core.TempDir}/list_of_expired_passports.csv.bz2`;
-			let file = fs.createWriteStream(`${this.#core.TempDir}/list_of_expired_passports.csv`);
-			fs.createReadStream(source).pipe(bz2()).pipe(file).on("finish", ()=> resolve(true)).on("error", ()=> reject(false));
+			fs.createReadStream(this.#pathArhive)
+				.pipe(bz2())
+				.pipe(this.#pathCsv)
+				.on("finish", ()=> resolve(true))
+				.on("error", ()=> reject(false))
 		})
+	}
+	async #Update() {
+		this.#myInterface = new lineReader(this.#pathCsv);
+
+		this.#myInterface.on('error', err=> {
+			console.log("ошибка ", error);
+		});
+
+		this.#myInterface.on('line', async line=> {
+			let item = `('${line.split(",").reduce((total, item)=> total = total.concat(item), "")}')`;
+			if (item != "('PASSP_SERIESPASSP_NUMBER')") this.#data.push(item);
+			if (this.#data.length > 1000) {
+				this.#myInterface.pause();
+				await this.#InsertData();
+			}
+		});
+
+		this.#myInterface.on('end', async ()=> {
+			console.log("закончили обработку");
+			await this.#InsertData();
+		});
+	}
+	async #InsertData() {
+		if (this.#data.length > 0) {
+			let result = await this.#core.Connector.Request("dexol", `
+				INSERT IGNORE INTO expired_passports (value) VALUES ${this.#data.join(",")}
+			`);
+		}
+		this.#data = [];
+		this.#myInterface.resume();
 	}
 }

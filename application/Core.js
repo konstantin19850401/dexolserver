@@ -22,6 +22,7 @@ class Core {
 	get Connector() { return this.#connectors.find(item=> item.Name == "mysql"); }
 	get Toolbox() { return TOOLBOX; }
 	get Applications() { return this.#applications; }
+	get TempDir() { return `${__dirname}/temp`; }
 
 	Start() {
 		this.#express.use(this.#AllowCrossDomain())
@@ -66,16 +67,16 @@ class Core {
 		let mysql = this.#connectors.find(item=> item.Name == "mysql");
 		mysql.AddBase({name: "dexol", host: "127.0.0.1", user: "dex", password: "12473513", database: "dexol_system"});
 
-		mysql.AddBase({name: "mega", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mega"});
-		mysql.AddBase({name: "mts_sts_062013", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mts_sts_062013"});
-		mysql.AddBase({name: "mts_sts", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mts_sts"});
-		mysql.AddBase({name: "mts_kbr", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mts_kbr"});
-		mysql.AddBase({name: "mts_kbr_salp", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mts_kbr_salp"});
-		mysql.AddBase({name: "mts_kcr", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mts_kcr"});
-		mysql.AddBase({name: "mts_kcr_distr", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mts_kcr_distr"});
-		mysql.AddBase({name: "yota", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_yota"});
-		mysql.AddBase({name: "beeline_sts", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_beeline_sts"});
-		mysql.AddBase({name: "beeline_kcr", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_beeline_kcr"});
+		// mysql.AddBase({name: "mega", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mega"});
+		// mysql.AddBase({name: "mts_sts_062013", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mts_sts_062013"});
+		// mysql.AddBase({name: "mts_sts", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mts_sts"});
+		// mysql.AddBase({name: "mts_kbr", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mts_kbr"});
+		// mysql.AddBase({name: "mts_kbr_salp", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mts_kbr_salp"});
+		// mysql.AddBase({name: "mts_kcr", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mts_kcr"});
+		// mysql.AddBase({name: "mts_kcr_distr", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_mts_kcr_distr"});
+		// mysql.AddBase({name: "yota", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_yota"});
+		// mysql.AddBase({name: "beeline_sts", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_beeline_sts"});
+		// mysql.AddBase({name: "beeline_kcr", host: "192.168.0.33", user: "dex", password: "dex", database: "dex_beeline_kcr"});
 		return true;
 	}
 	#InitApps() {
