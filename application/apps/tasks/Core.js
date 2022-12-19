@@ -20,7 +20,7 @@ class Tasks {
 	get Name() { return this.#name; }
 
 	async #Init() {
-		// let expiredPassports = new ExpiredPassports(this.#core);
+		let expiredPassports = new ExpiredPassports(this.#core);
 	}
 	
 }
@@ -48,6 +48,8 @@ class Packet {
 class ExpiredPassports {
 	#core;#pathArhive;#pathCsv;#url;
 	#myInterface;#data = [];
+	#startH;#inProcess = false;
+	#lastStart;
 	constructor(core) {
 		this.#core = core;
 		this.#pathArhive = `${this.#core.TempDir}/list_of_expired_passports.csv.bz2`;
@@ -55,10 +57,23 @@ class ExpiredPassports {
 		this.#url = `https://проверки.гувм.мвд.рф/upload/expired-passports/list_of_expired_passports.csv.bz2`;
 		this.#Init();
 	}
+	get Reasons() {
+		return {
+			1: "ИСТЕК СРОК ДЕЙСТВИЯ",
+			2: "ЗАМЕНЕН НА НОВЫЙ",
+			3: "ВЫДАН С НАРУШЕНИЕМ",
+			4: "ЧИСЛИТСЯ В РОЗЫСКЕ",
+			5: "ИЗЪЯТ, УНИЧТОЖЕН",
+			6: "В СВЯЗИ СО СМЕРТЬЮ ВЛАДЕЛЬЦА",
+			8: "ТЕХНИЧЕСКИЙ БРАК"
+		}
+	}
 	async #Init() {
 		await this.#core.Connector.Request("dexol", `
             CREATE TABLE IF NOT EXISTS expired_passports (
-                value VARCHAR(11) NOT NULL UNIQUE
+                value VARCHAR(11) NOT NULL UNIQUE,
+                code VARCHAR(5) NOT NULL,
+                reason VARCHAR(50) NOT NULL
             ) ENGINE = InnoDB
             PARTITION BY KEY(value) (
             	PARTITION p0 ENGINE=InnoDB,
@@ -73,13 +88,23 @@ class ExpiredPassports {
 				PARTITION p9 ENGINE=InnoDB
             )
         `);
-
-		if (await this.#DownloadFile() && await this.#ExtractZip()) {
-			console.log("Скачали и распаковали");
-			this.#data = [];
-			this.#Update();
-		} else {
-			console.log("Ошибка. Не делаем");
+		this.#startH = 15; // час, после которого производится ежедневный запуск задачи
+		let moment = this.#core.Toolbox.Moment();
+		this.#lastStart = moment().add(-1, "days");
+		this.#SetNextStartDate();
+	}
+	async #StartTask() {
+		console.log("запускаем задачу");
+		if (!this.#inProcess) {
+			console.log("запуск задачи");
+			this.#inProcess = true;
+			if (await this.#DownloadFile() && await this.#ExtractZip()) {
+				console.log("Скачали и распаковали");
+				this.#data = [];
+				this.#Update();
+			} else {
+				console.log("Ошибка. Не делаем");
+			}
 		}
 	}
 	async #DownloadFile() {
@@ -99,46 +124,78 @@ class ExpiredPassports {
 						});
 				})
 				.on("error", err=> console.log("Ошибка скачивания ", err) && reject(false));
-
 		})
 	}
 	async #ExtractZip() {
 		return new Promise((resolve, reject)=> {
-			fs.createReadStream(this.#pathArhive)
+			try {
+				fs.createReadStream(this.#pathArhive)
 				.pipe(bz2())
-				.pipe(this.#pathCsv)
-				.on("finish", ()=> resolve(true))
-				.on("error", ()=> reject(false))
+				.pipe(fs.createWriteStream(this.#pathCsv))
+				.on("finish", ()=> resolve(1))
+				.on("error", ()=> resolve(0));
+			} catch(e) {
+				console.log("ошибка ", e);
+				resolve(0);
+			}
 		})
 	}
 	async #Update() {
 		this.#myInterface = new lineReader(this.#pathCsv);
 
-		this.#myInterface.on('error', err=> {
-			console.log("ошибка ", error);
-		});
+		this.#myInterface.on('error', err=> console.log("ошибка ", error));
 
 		this.#myInterface.on('line', async line=> {
-			let item = `('${line.split(",").reduce((total, item)=> total = total.concat(item), "")}')`;
-			if (item != "('PASSP_SERIESPASSP_NUMBER')") this.#data.push(item);
-			if (this.#data.length > 1000) {
-				this.#myInterface.pause();
-				await this.#InsertData();
+			let arr = line.split(",");
+			if (arr[0] != "PASSP_SERIES") {
+				let pdata = arr[0].concat(arr[1]);
+				let code = arr[2];
+				let reason = arr.slice(3, arr.length).join(", ");
+				let item = `('${pdata}','${code}','${reason}')`;
+				this.#data.push(item);
+				if (this.#data.length > 1000) {
+					this.#myInterface.pause();
+					await this.#InsertData();
+				}
 			}
 		});
 
 		this.#myInterface.on('end', async ()=> {
-			console.log("закончили обработку");
 			await this.#InsertData();
+			this.#SetNextStartDate();
 		});
 	}
 	async #InsertData() {
 		if (this.#data.length > 0) {
 			let result = await this.#core.Connector.Request("dexol", `
-				INSERT IGNORE INTO expired_passports (value) VALUES ${this.#data.join(",")}
+				INSERT IGNORE INTO expired_passports (value, code, reason) VALUES ${this.#data.join(",")}
 			`);
 		}
 		this.#data = [];
 		this.#myInterface.resume();
+	}
+
+	#SetNextStartDate() {
+		let moment = this.#core.Toolbox.Moment();
+		let date = moment();
+		let ndate = moment();
+		let hh = date.hour();
+		if (date.diff(this.#lastStart, "days") > 0) {
+			if (hh >= this.#startH && hh <= 24) {
+				// если задача выполняется, то запустим ее через 10 мин, иначе - запускаем
+				if (this.#inProcess) setTimeout(()=> this.#SetNextStartDate(), ndate.add(10, "minutes").diff(date));
+				else {
+					this.#lastStart = date;
+					this.#StartTask();
+				}
+			} else {
+				let next = moment(date.format(`YYYY-MM-DDT${this.#startH}:01:00Z`));
+				setTimeout(()=> this.#SetNextStartDate(), next.diff(date));
+			}
+		} else {
+			let next = moment(date.format(`YYYY-MM-DDT${this.#startH}:01:00Z`)).add(1, "days");
+			console.log("задача в текущий день уже запускалась. Запустим через ", next.diff(date), " ms" );
+			setTimeout(()=> this.#SetNextStartDate(), next.diff(date));
+		}
 	}
 }
