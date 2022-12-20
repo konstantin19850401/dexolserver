@@ -49,7 +49,7 @@ class ExpiredPassports {
 	#core;#pathArhive;#pathCsv;#url;
 	#myInterface;#data = [];
 	#startH;#inProcess = false;
-	#lastStart;
+	#lastStart;#cnt = 0;
 	constructor(core) {
 		this.#core = core;
 		this.#pathArhive = `${this.#core.TempDir}/list_of_expired_passports.csv.bz2`;
@@ -71,9 +71,7 @@ class ExpiredPassports {
 	async #Init() {
 		await this.#core.Connector.Request("dexol", `
             CREATE TABLE IF NOT EXISTS expired_passports (
-                value VARCHAR(11) NOT NULL UNIQUE,
-                code VARCHAR(5) NOT NULL,
-                reason VARCHAR(50) NOT NULL
+                value VARCHAR(11) NOT NULL UNIQUE
             ) ENGINE = InnoDB
             PARTITION BY KEY(value) (
             	PARTITION p0 ENGINE=InnoDB,
@@ -88,13 +86,13 @@ class ExpiredPassports {
 				PARTITION p9 ENGINE=InnoDB
             )
         `);
-		this.#startH = 15; // час, после которого производится ежедневный запуск задачи
+		this.#startH = 12; // час, после которого производится ежедневный запуск задачи
 		let moment = this.#core.Toolbox.Moment();
 		this.#lastStart = moment().add(-1, "days");
 		this.#SetNextStartDate();
 	}
 	async #StartTask() {
-		console.log("запускаем задачу");
+		console.log("попытка запуска задачи");
 		if (!this.#inProcess) {
 			console.log("запуск задачи");
 			this.#inProcess = true;
@@ -148,27 +146,32 @@ class ExpiredPassports {
 		this.#myInterface.on('line', async line=> {
 			let arr = line.split(",");
 			if (arr[0] != "PASSP_SERIES") {
+				this.#cnt++;
 				let pdata = arr[0].concat(arr[1]);
-				let code = arr[2];
-				let reason = arr.slice(3, arr.length).join(", ");
-				let item = `('${pdata}','${code}','${reason}')`;
+				// let code = arr[2];
+				// let reason = arr.slice(3, arr.length).join(", ");
+				// let item = `('${pdata}','${code}','${reason}')`;
+				// let item = `('${pdata}','${code}')`;
+				let item = `('${pdata}')`;
 				this.#data.push(item);
 				if (this.#data.length > 1000) {
 					this.#myInterface.pause();
 					await this.#InsertData();
 				}
+				if (this.#cnt % 10000000 == 0) console.log("Обработано "+ this.#cnt +" строк");
 			}
 		});
 
 		this.#myInterface.on('end', async ()=> {
 			await this.#InsertData();
+			this.#inProcess = false;
 			this.#SetNextStartDate();
 		});
 	}
 	async #InsertData() {
 		if (this.#data.length > 0) {
 			let result = await this.#core.Connector.Request("dexol", `
-				INSERT IGNORE INTO expired_passports (value, code, reason) VALUES ${this.#data.join(",")}
+				INSERT IGNORE INTO expired_passports (value) VALUES ${this.#data.join(",")}
 			`);
 		}
 		this.#data = [];
@@ -176,24 +179,25 @@ class ExpiredPassports {
 	}
 
 	#SetNextStartDate() {
+		this.#cnt = 0;
 		let moment = this.#core.Toolbox.Moment();
 		let date = moment();
 		let ndate = moment();
 		let hh = date.hour();
 		if (date.diff(this.#lastStart, "days") > 0) {
 			if (hh >= this.#startH && hh <= 24) {
-				// если задача выполняется, то запустим ее через 10 мин, иначе - запускаем
+				// если задача выполняется, то запустим ее через 10 мин, иначе - запускаем сразу
 				if (this.#inProcess) setTimeout(()=> this.#SetNextStartDate(), ndate.add(10, "minutes").diff(date));
 				else {
 					this.#lastStart = date;
 					this.#StartTask();
 				}
 			} else {
-				let next = moment(date.format(`YYYY-MM-DDT${this.#startH}:01:00Z`));
+				let next = moment(date.format(`YYYY-MM-DDT${this.#startH}:01:00Z`), "YYYY-MM-DDTHH:mm");
 				setTimeout(()=> this.#SetNextStartDate(), next.diff(date));
 			}
 		} else {
-			let next = moment(date.format(`YYYY-MM-DDT${this.#startH}:01:00Z`)).add(1, "days");
+			let next = moment(date.format(`YYYY-MM-DDT${this.#startH}:01:00Z`), "YYYY-MM-DDTHH:mm").add(1, "days");
 			console.log("задача в текущий день уже запускалась. Запустим через ", next.diff(date), " ms" );
 			setTimeout(()=> this.#SetNextStartDate(), next.diff(date));
 		}

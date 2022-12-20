@@ -53,6 +53,9 @@ typings/
 #archives
 *.bz2
 
+#keys
+*.key
+
 # Optional npm cache directory
 .npm
 
