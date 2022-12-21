@@ -56,6 +56,7 @@ typings/
 #keys
 *.key
 *.sign
+*.enc
 
 # Optional npm cache directory
 .npm
