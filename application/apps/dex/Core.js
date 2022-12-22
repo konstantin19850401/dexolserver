@@ -115,7 +115,8 @@ class Base {
 		// 	AddrPhone: "9999999999"
 		// }}, this), 5000);
 
-		setTimeout( ()=> { let converter = new Converter(this.#toolbox, this.#connector, this); }, 3000 );
+		// конвертер
+		// setTimeout( ()=> { let converter = new Converter(this.#toolbox, this.#connector, this); }, 3000 );
 	}
 	async #LoadJournals() {
 		let journals = [{id: 1, name: "journal", storage: this.#journal}, {id: 2, name: "archive", storage: this.#archive}];

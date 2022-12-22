@@ -96,17 +96,14 @@ class ExpiredPassports {
 		if (!this.#inProcess) {
 			console.log("запуск задачи");
 			this.#inProcess = true;
-			// if (await this.#DownloadFile() && await this.#ExtractZip()) {
-			// if (await this.#ExtractZip()) {
-			// 	console.log("Скачали и распаковали");
-			// 	this.#data = [];
-			// 	this.#Update();
-			// } else {
-			// 	console.log("Ошибка. Не делаем");
-			// }
-
-			this.#data = [];
-			this.#Update();
+			if (await this.#DownloadFile() && await this.#ExtractZip()) {
+			if (await this.#ExtractZip()) {
+				console.log("Скачали и распаковали");
+				this.#data = [];
+				this.#Update();
+			} else {
+				console.log("Ошибка. Не делаем");
+			}
 		}
 	}
 	async #DownloadFile() {
