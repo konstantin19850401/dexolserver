@@ -97,7 +97,6 @@ class ExpiredPassports {
 			console.log("запуск задачи");
 			this.#inProcess = true;
 			if (await this.#DownloadFile() && await this.#ExtractZip()) {
-			if (await this.#ExtractZip()) {
 				console.log("Скачали и распаковали");
 				this.#data = [];
 				this.#Update();
