@@ -407,7 +407,7 @@ class KiwiTerminal {
 								resolve({status: 4, result: json?.response?.providers[0]?.getPaymentStatus[0]?.$?.result});
 							}
 						} else {
-							resolve({status: 3, result: json?.response?.$?.result});
+							resolve({status: 3, result: parseInt(json?.response?.$?.result)});
 						}
 					}
 				});
@@ -435,6 +435,7 @@ class KiwiTerminal {
 				request.post(data, async (err, response, body)=> {
 					if (err) {
 						console.log("err=> ", err);
+						if (err.code == "ETIMEDOUT") {};
 						resolve({status: 2});
 					} else {
 						let json = await this.#toolbox.XmlToString(body);
@@ -685,7 +686,11 @@ class PaymentsTask {
 							payment.status = 5;
 							this.#paymentStatusCheck = this.#paymentStatusCheck.filter(item=> item.hash != payment.hash);
 						} else if (check.paymentStatus == 3 || check.paymentStatus == 1) this.#paymentStatusCheck.push(payment);
-					} else payment.status = 5;
+					} else {
+						console.log("Проверка статуса платежа. Внимание. Не ноль. ", check);
+						if (check.result == 272) console.log("Снова опросим");
+						else payment.status = 5;
+					}
 					await this.SaveTaskData();
 				} else {
 					console.log("Есть платеж на проверку статуса. Но терминал пока занят ", payment.num);
