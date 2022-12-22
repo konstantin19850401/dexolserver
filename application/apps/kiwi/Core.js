@@ -487,6 +487,7 @@ class KiwiTerminal {
 						} else if (result.status == 272) { 
 							console.log("Провайдер в данный момент не доступен, пересчитать задачу");
 							payment.status = 272;
+							payment.id = "";
 							await task.RebuildTask();
 						}  
 						else payment.status = 4;
@@ -511,66 +512,6 @@ class KiwiTerminal {
 			await task.SaveTaskData();
 			return;
 		}
-
-
-
-
-
-
-		// this.#isBusy = 1;
-		// console.log("отправляем платеж на сумму ", payment.amount, " для номера ", payment.num, " для задачи ", task.Id);
-		// payment.status = 1;
-		// let provider = await this.GetProviderByPhone(task.Person, payment);
-		// if (provider.status != 0) {
-		// 	payment.status = 7;
-		// 	await task.SaveTaskData();
-		// 	this.#isBusy = 0;
-		// 	return;
-		// }
-		// payment.service = provider.id;
-		// let lastPayment = await this.GetLastId(task.Person);
-		// if (lastPayment.status != 0) {
-		// 	payment.status = 3;
-		// 	await task.SaveTaskData();
-		// 	this.#isBusy = 0;
-		// 	return;
-		// }
-		// payment.id = lastPayment.id + 1;
-		// let agentBalance = await this.GetBalance(task.Person);
-		// if (lastPayment.status != 0) {
-		// 	payment.status = 10;
-		// 	await task.SaveTaskData();
-		// 	this.#isBusy = 0;
-		// 	return;
-		// }
-		// if (agentBalance.balance < payment.amount) {
-		// 	payment.status = 8;
-		// 	await task.SaveTaskData();
-		// 	this.#isBusy = 0;
-		// 	return;
-		// }
-		// let checkPayment = await this.CheckPaymentRequisites(task.Person, payment);
-		// if (checkPayment.status != 0) {
-		// 	if (checkPayment.status == 16) payment.status = 16; // Превышен суточный лимит на сумму операций
-		// 	else payment.status = 4;
-		// 	await task.SaveTaskData();
-		// 	this.#isBusy = 0;
-		// 	return;
-		// }
-		// let offlinePayment = await this.#AddOfflinePayment(task.Person, payment);
-		// if (offlinePayment.status != 0) {
-		// 	payment.status = 5;
-		// 	await task.SaveTaskData();
-		// 	this.#isBusy = 0;
-		// 	return;
-		// }
-		// payment.status = 6;
-		// await task.SaveTaskData();
-		// // console.log("provider=> ", provider);
-		// // console.log("lastPayment=> ", lastPayment);
-		// // console.log("agentBalance=> ", agentBalance);
-		// // console.log("checkPayment=> ", checkPayment);
-		// this.#isBusy = 0;
 	}
 
 }
