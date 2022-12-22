@@ -71,7 +71,8 @@ class ExpiredPassports {
 	async #Init() {
 		await this.#core.Connector.Request("dexol", `
             CREATE TABLE IF NOT EXISTS expired_passports (
-                value VARCHAR(11) NOT NULL UNIQUE
+                value VARCHAR(11) NOT NULL UNIQUE,
+                code TINYINT(2) NOT NULL
             ) ENGINE = InnoDB
             PARTITION BY KEY(value) (
             	PARTITION p0 ENGINE=InnoDB,
@@ -86,23 +87,26 @@ class ExpiredPassports {
 				PARTITION p9 ENGINE=InnoDB
             )
         `);
-		this.#startH = 12; // час, после которого производится ежедневный запуск задачи
+		this.#startH = 16; // час, после которого производится ежедневный запуск задачи
 		let moment = this.#core.Toolbox.Moment();
 		this.#lastStart = moment().add(-1, "days");
 		this.#SetNextStartDate();
 	}
 	async #StartTask() {
-		console.log("попытка запуска задачи");
 		if (!this.#inProcess) {
 			console.log("запуск задачи");
 			this.#inProcess = true;
-			if (await this.#DownloadFile() && await this.#ExtractZip()) {
-				console.log("Скачали и распаковали");
-				this.#data = [];
-				this.#Update();
-			} else {
-				console.log("Ошибка. Не делаем");
-			}
+			// if (await this.#DownloadFile() && await this.#ExtractZip()) {
+			// if (await this.#ExtractZip()) {
+			// 	console.log("Скачали и распаковали");
+			// 	this.#data = [];
+			// 	this.#Update();
+			// } else {
+			// 	console.log("Ошибка. Не делаем");
+			// }
+
+			this.#data = [];
+			this.#Update();
 		}
 	}
 	async #DownloadFile() {
@@ -148,11 +152,8 @@ class ExpiredPassports {
 			if (arr[0] != "PASSP_SERIES") {
 				this.#cnt++;
 				let pdata = arr[0].concat(arr[1]);
-				// let code = arr[2];
-				// let reason = arr.slice(3, arr.length).join(", ");
-				// let item = `('${pdata}','${code}','${reason}')`;
-				// let item = `('${pdata}','${code}')`;
-				let item = `('${pdata}')`;
+				let code = arr[2];
+				let item = `('${pdata}', '${code}')`;
 				this.#data.push(item);
 				if (this.#data.length > 1000) {
 					this.#myInterface.pause();
@@ -171,7 +172,7 @@ class ExpiredPassports {
 	async #InsertData() {
 		if (this.#data.length > 0) {
 			let result = await this.#core.Connector.Request("dexol", `
-				INSERT IGNORE INTO expired_passports (value) VALUES ${this.#data.join(",")}
+				INSERT IGNORE INTO expired_passports (value, code) VALUES ${this.#data.join(",")}
 			`);
 		}
 		this.#data = [];

@@ -301,6 +301,8 @@ class KiwiTerminal {
 										resolve({status: 202});
 									} else if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.result == 215) {
 										resolve({status: 215}); 
+									} else if (json?.response?.providers[0]?.checkPaymentRequisites[0]?.payment[0]?.$?.result == 272) {
+										resolve({status: 272}); 
 									} else {
 										resolve({status: 3});
 									}
@@ -482,7 +484,12 @@ class KiwiTerminal {
 						else if (result.status == 215) { 
 							console.log("платеж надо провести попозже");
 							payment.status = 215;
-						} else payment.status = 4;
+						} else if (result.status == 272) { 
+							console.log("Провайдер в данный момент не доступен, пересчитать задачу");
+							payment.status = 272;
+							await task.RebuildTask();
+						}  
+						else payment.status = 4;
 					} else {
 						payment.status = item.errStatus;
 					}
@@ -781,6 +788,10 @@ class PaymentsTask {
 			WHERE id = '${this.#id}'
 		`);
 	}
+	RebuildTask() {
+		console.log("Сделаем пересчет задачи");
+		this.#SetDates();
+	}
 }
 
 
@@ -794,10 +805,12 @@ const kiwiErrors = {
 	152: "Невозможно выполнить операцию. Неодноразовый пароль",
 	155: "Прием платежа для данного провайдера запрещен",
 	210: "Нет такой транзакции в базе",
+	244: "Терминал не зарегистрирован у оператора",
+	272: "Временно нет связи с провайдером",
 	246: "Терминал привязан к другому компьютеру",
 	295: "Ошибка в названии интерфейса или действия",
 	300: "Другая (неизвестная) ошибка провайдера",
-	244: "Терминал не зарегистрирован у оператора"
+	
 }
 
 const serverErrors = {
