@@ -6,10 +6,15 @@ class Api {
 		this.#HTTP_STATUSES = this.#core.HttpStatuses;
 		this.#connector = this.#core.Connector;
 	}
-	#GetAppData(packet, users) {
+	#GetAppData(packet, users, application) {
 		let user = users.find(item => item.Uid == packet.uid);
-		let dicts = this.#core.Dicts.List;
-		let data = {action: packet.data.action};
+		let paymentsList = application.PaymentsList;
+		let list = [];
+		let ignore = ["list", "successCnt"];
+		for (let item of paymentsList) {
+			list.push(Object.fromEntries(Object.entries(item).filter(([key]) => ignore.indexOf(key) == -1)));
+		}
+		let data = {action: packet.data.action, dicts: application.Dictionaries, list: list};
 		let rpacket = new Packet({status: this.#HTTP_STATUSES.OK, data: data, hash: packet.hash});
 		user.CloseConnection(rpacket.ToString());
 	}
@@ -48,6 +53,11 @@ class Api {
 		let rpacket = new Packet({status: status, data: data, hash: packet.hash});
 		let user = users.find(item => item.Uid == packet.uid);
 		user.CloseConnection(rpacket.ToString());
+	}
+	#GetAppDictionaries(packet, users, application) {
+		let data = {action: packet.data.action, list: application.Dictionaries};
+		let rpacket = new Packet({status: this.#HTTP_STATUSES.OK, data: data, hash: packet.hash});
+		user.CloseConnection(rpacket.ToString());	
 	}
 	async #NewTask(packet, users, application) {
 		let errs = [];
@@ -121,8 +131,8 @@ class Api {
 			{name: "getAppData",           method: (...args) => { this.#GetAppData(...args) } },
 			{name: "getPaymentsList",      method: (...args) => { this.#GetPaymentsList(...args) } },
 			{name: "getPayment",           method: (...args) => { this.#GetPayment(...args) } },
+			{name: "getDicts",			   method: (...args) => { this.#GetAppDictionaries(...args) } },
 			{name: "newTask",              method: (...args) => { this.#NewTask(...args) } },
-			// {name: }
 		];
 		if (!allowed.find(item=> item.name == packet?.data?.action)) {
 			let p = {status: this.#HTTP_STATUSES.METHOD_NOT_ALLOWED, data: {action: packet?.data?.action, errs: ["Action not allowed"]}};

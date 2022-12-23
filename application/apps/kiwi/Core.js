@@ -13,7 +13,6 @@ class Kiwi {
 		this.#core = args[0];
 		this.#connector = this.#core.Connector;
 		this.#toolbox = this.#core.Toolbox;
-		this.#api = new Api(this.#core);
 		this.#HttpStatuses = this.#core.HttpStatuses;
 		this.#api = new Api(this.#core);
 		this.#Init();
@@ -27,6 +26,10 @@ class Kiwi {
 			}
 		}
 		return rows;
+	}
+	get Dictionaries() {
+		console.log(this.#core.Dicts.List);
+		return this.#core.Dicts.List;
 	}
 	async #Init() {
 		let rows = await this.#connector.Request("dexol", `
